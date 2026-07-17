@@ -1,8 +1,15 @@
 # Soundfonts
 
-Drop the harmonium soundfont here as `harmonium.sf2` (or `.sf3`).
+## Bundled: `harmonium.sf2` ✅
+A CC-BY 4.0 harmonium is committed here — "Wetthasinghe Harmonium General Midi
+Version" (Musical Artifacts #2127), single preset "Harmonium" at bank 0 /
+program 20 (matches `render`'s MIDI output). Full attribution and SHA-256 are in
+[`../LICENSES.md`](../LICENSES.md). Re-fetch/verify with `./scripts/fetch_soundfont.sh`.
 
-## Day-1 task (spec §6, Path 1)
+This unblocks the full render pipeline today. Auditioning better harmoniums (and
+eventually self-recording, spec §6 Path 2) remains a quality-upgrade task.
+
+## Adding/replacing a soundfont (spec §6, Path 1)
 Audition 3–5 free harmonium SF2/SFZ sets and pick the best:
 - [Musical Artifacts](https://musical-artifacts.com/) — search "harmonium".
 - [Polyphone soundfont library](https://www.polyphone-soundfonts.com/).

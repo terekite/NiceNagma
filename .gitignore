@@ -21,6 +21,9 @@ assets/soundfonts/*.sf2
 assets/soundfonts/*.sf3
 assets/tanpura/*.wav
 assets/tanpura/*.flac
+# ...but DO commit the small CC-BY 4.0 harmonium (958 KB) so render/CI/Docker are
+# reproducible without depending on an external host. Attribution: assets/LICENSES.md.
+!assets/soundfonts/harmonium.sf2
 
 # Flutter / Dart
 app/.dart_tool/

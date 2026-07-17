@@ -8,11 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - `contracts/` — the three JSON Schemas (`NagmaDoc`, `ExpressiveScore`, `RenderRequest`) are written and frozen.
 - `core/` — **implemented and tested** (18 tests, pure stdlib): taal defs, sargam parser, compiler, performance model, `nagma-compile` CLI.
-- `render/` — **implemented**; mastering tested (`master.py`, seam-wrap + bellows + loudness). The audio stage needs `fluidsynth` + a harmonium soundfont, both isolated behind `sampler.py` so the pipeline is testable without them. `nagma-render` CLI + FastAPI service + Dockerfile present.
+- `render/` — **implemented and renders end-to-end**; mastering tested (`master.py`, seam-wrap + bellows + loudness). fluidsynth call isolated behind `sampler.py`. `nagma-render` CLI + FastAPI service + Dockerfile present. `./scripts/smoke.sh` produces a real WAV (verified: Bhairavi/D/80 BPM/4 avartans → exactly 2,116,800 frames, RMS 0.107).
 - `app/` — **scaffolded only** (Flutter). Real project not bootstrapped yet (Flutter/Xcode not installed). The render HTTP client (`lib/services/render_client.dart`) is the one implemented seam.
-- `assets/` — dir structure + `LICENSES.md` + stock Bhairavi nagma. **No soundfont yet** (Day-1 audition task).
+- `assets/` — dir structure + `LICENSES.md` + stock Bhairavi nagma + **bundled CC-BY 4.0 `soundfonts/harmonium.sf2`** (Musical Artifacts #2127, preset at bank 0/program 20; re-fetch via `./scripts/fetch_soundfont.sh`).
 
-Two external installs gate the audio stage: `brew install fluid-synth` and a harmonium SF2 in `assets/soundfonts/`. Treat the spec as source of truth and keep this file current as packages evolve.
+The audio stage needs `fluidsynth` on PATH (macOS: `brew install fluid-synth`) plus the Python render deps (`mido`, `numpy`, `soundfile`); the soundfont is now committed. Treat the spec as source of truth and keep this file current as packages evolve.
 
 ## What the product is
 
