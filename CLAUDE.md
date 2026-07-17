@@ -4,7 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-**Pre-implementation.** No source code exists yet — the repo holds only the design spec and this file (there are no commits yet). The design of record is `nagma-app-planning-spec.md` (Draft v0.3) — a 3-day-sprint plan for a tabla-practice lehra/nagma app. Everything below describes the architecture that spec commits to; treat the spec as the source of truth and update this file as real packages land.
+**Phase 1 landed: render pipeline is real and tested.** The design of record is `nagma-app-planning-spec.md` (Draft v0.3) — a 3-day-sprint plan for a tabla-practice lehra/nagma app. iOS-first (TestFlight); Android deferred. Current state of the monorepo:
+
+- `contracts/` — the three JSON Schemas (`NagmaDoc`, `ExpressiveScore`, `RenderRequest`) are written and frozen.
+- `core/` — **implemented and tested** (18 tests, pure stdlib): taal defs, sargam parser, compiler, performance model, `nagma-compile` CLI.
+- `render/` — **implemented**; mastering tested (`master.py`, seam-wrap + bellows + loudness). The audio stage needs `fluidsynth` + a harmonium soundfont, both isolated behind `sampler.py` so the pipeline is testable without them. `nagma-render` CLI + FastAPI service + Dockerfile present.
+- `app/` — **scaffolded only** (Flutter). Real project not bootstrapped yet (Flutter/Xcode not installed). The render HTTP client (`lib/services/render_client.dart`) is the one implemented seam.
+- `assets/` — dir structure + `LICENSES.md` + stock Bhairavi nagma. **No soundfont yet** (Day-1 audition task).
+
+Two external installs gate the audio stage: `brew install fluid-synth` and a harmonium SF2 in `assets/soundfonts/`. Treat the spec as source of truth and keep this file current as packages evolve.
 
 ## What the product is
 
@@ -47,13 +55,13 @@ These are the product's entire reason to exist — do not compromise them for co
 1. **Machine-perfect laya.** Matra boundaries and *sam* (beat 1) are mathematically exact. Micro-timing jitter is applied only to non-structural notes.
 2. **Human timbre via pure code.** The "human" layer is the win and needs no ML: micro-timing jitter, taal-shaped dynamics (swell toward sam), legato overlap between notes, slow bellows-style amplitude undulation, and per-avartan variation (render a 4–8 cycle super-loop with different seeds per cycle so it isn't rubber-stamped). Neural refinement is explicitly deferred (roadmap only).
 
-## Commands (planned — not yet implemented)
+## Commands
 
-Per the spec, once `render/` exists:
-- Render a loop from a score: `nagma-render score.json -o loop.wav`
-- An end-to-end smoke script (text nagma → score → WAV) must assert **exact loop length** and run in CI and locally. This is the primary correctness gate for the render pipeline.
-
-There is no build/test tooling in the repo yet. When adding it, wire the smoke test as the CI gate before anything else.
+- Compile text nagma → score: `PYTHONPATH=core/src python3 -m nagma_core.cli assets/nagmas/bhairavi-teentaal.nagma --bpm 80 --sa D -o score.json` (or `nagma-compile ...` once installed).
+- Render a loop from a score: `nagma-render score.json -o loop.wav --soundfont assets/soundfonts/harmonium.sf2` (or set `NAGMA_SOUNDFONT`). Needs fluidsynth + a soundfont.
+- End-to-end smoke test (**the primary correctness gate**): `./scripts/smoke.sh`. Text nagma → score → WAV, asserting **exact loop length** via `scripts/assert_loop_length.py`. The score stage runs on pure stdlib; the WAV stage runs only when fluidsynth + a soundfont are present, else it skips with a notice. Wired into `.github/workflows/ci.yml`.
+- Tests: `cd core && PYTHONPATH=src pytest -q` (no deps); `cd render && pytest -q` (needs numpy/soundfile).
+- Python deps via `uv sync` (workspace root ties `core` + `render` together).
 
 ## Key domain terms
 

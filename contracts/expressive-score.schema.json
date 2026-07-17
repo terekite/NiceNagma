@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nicenagma.app/contracts/expressive-score.schema.json",
+  "title": "ExpressiveScore",
+  "description": "The compiled, exact-time performance of a NagmaDoc at a specific BPM and Sa, expanded across a super-loop of N avartans with per-avartan expressive variation baked in. This is what the render package consumes. INVARIANT: matra boundaries and sam are mathematically exact; micro-timing jitter is applied only to non-structural notes.",
+  "type": "object",
+  "required": [
+    "schema_version", "sample_rate", "bpm", "sa_midi", "instrument",
+    "avartans", "matra_count", "matra_dur_s", "avartan_dur_s",
+    "loop_length_s", "loop_length_samples", "events"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "sample_rate": { "type": "integer", "enum": [44100, 48000] },
+    "bpm": { "type": "number", "minimum": 20, "maximum": 300, "description": "Beats (matras) per minute." },
+    "sa_midi": { "type": "integer", "minimum": 0, "maximum": 127, "description": "MIDI note number the Sa (tonic) maps to." },
+    "instrument": { "type": "string", "enum": ["harmonium"] },
+    "avartans": { "type": "integer", "minimum": 1, "maximum": 8, "description": "Number of cycles in the rendered super-loop." },
+    "matra_count": { "type": "integer", "minimum": 1, "description": "Matras per avartan (16 for Teentaal)." },
+    "matra_dur_s": { "type": "number", "exclusiveMinimum": 0, "description": "Exact seconds per matra = 60 / bpm." },
+    "avartan_dur_s": { "type": "number", "exclusiveMinimum": 0, "description": "matra_count * matra_dur_s." },
+    "loop_length_s": { "type": "number", "exclusiveMinimum": 0, "description": "avartans * avartan_dur_s." },
+    "loop_length_samples": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "description": "round(loop_length_s * sample_rate). The render MUST be trimmed/padded to exactly this many frames for gapless looping. This is the primary correctness gate."
+    },
+    "seed": { "type": "integer", "description": "Base RNG seed; avartan a uses seed derived from this so the super-loop isn't rubber-stamped." },
+    "bellows": {
+      "type": "object",
+      "description": "Slow amplitude undulation applied as a post-render gain LFO (harmonium bellows breathing).",
+      "required": ["rate_hz", "depth"],
+      "additionalProperties": false,
+      "properties": {
+        "rate_hz": { "type": "number", "exclusiveMinimum": 0, "default": 0.25 },
+        "depth": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.09 }
+      }
+    },
+    "events": {
+      "type": "array",
+      "description": "All note events across the super-loop, sorted by start_s.",
+      "items": { "$ref": "#/$defs/event" }
+    }
+  },
+  "$defs": {
+    "event": {
+      "type": "object",
+      "required": ["start_s", "dur_s", "midi", "velocity", "matra", "avartan", "structural"],
+      "additionalProperties": false,
+      "properties": {
+        "start_s": { "type": "number", "minimum": 0, "description": "Onset in seconds from loop start. For structural notes this is exact (no jitter)." },
+        "dur_s": { "type": "number", "exclusiveMinimum": 0, "description": "Sounding duration including legato overlap into the next note." },
+        "midi": { "type": "integer", "minimum": 0, "maximum": 127 },
+        "velocity": { "type": "integer", "minimum": 1, "maximum": 127 },
+        "matra": { "type": "integer", "minimum": 0, "description": "Matra index within its avartan." },
+        "avartan": { "type": "integer", "minimum": 0, "description": "Which cycle of the super-loop this event belongs to." },
+        "structural": { "type": "boolean", "description": "True if this note lands on a matra boundary (no timing jitter applied)." }
+      }
+    }
+  }
+}

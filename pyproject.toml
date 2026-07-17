@@ -1,0 +1,11 @@
+# uv workspace root. The Python packages (core, render) are members; the app is
+# Flutter and lives outside the Python workspace.
+[tool.uv.workspace]
+members = ["core", "render"]
+
+[tool.uv.sources]
+nagma-core = { workspace = true }
+nagma-render = { workspace = true }
+
+[dependency-groups]
+dev = ["pytest>=7", "pyloudnorm>=0.1"]

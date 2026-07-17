@@ -1,2 +1,35 @@
 # IDE
 .idea/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+uv.lock
+
+# Render artifacts / caches
+*.wav
+*.flac
+*.mid
+/tmp/nagma-cache/
+
+# Large binary assets (decide per-file whether to commit; see assets/LICENSES.md)
+assets/soundfonts/*.sf2
+assets/soundfonts/*.sf3
+assets/tanpura/*.wav
+assets/tanpura/*.flac
+
+# Flutter / Dart
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/build/
+app/ios/Pods/
+app/ios/.symlinks/
+app/**/GeneratedPluginRegistrant.*
+
+# macOS
+.DS_Store

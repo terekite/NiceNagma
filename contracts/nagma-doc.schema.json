@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nicenagma.app/contracts/nagma-doc.schema.json",
+  "title": "NagmaDoc",
+  "description": "A parsed, validated nagma composition: a melodic loop exactly one taal cycle (avartan) long. Produced by the core sargam text-grammar parser. Instrument-, tempo-, and key-independent.",
+  "type": "object",
+  "required": ["schema_version", "taal", "matras"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "taal": {
+      "type": "string",
+      "description": "Taal identifier. MVP: 'teentaal' only, but the schema is taal-agnostic.",
+      "enum": ["teentaal"]
+    },
+    "raag": {
+      "type": "string",
+      "description": "Optional raag label for reference/library metadata. Not used by the compiler.",
+      "default": "bhairavi"
+    },
+    "name": { "type": "string", "description": "Human-facing name for the library." },
+    "source_text": {
+      "type": "string",
+      "description": "The original text-grammar the doc was parsed from, retained for round-tripping and editing."
+    },
+    "matras": {
+      "type": "array",
+      "description": "One entry per matra of the taal, in order. Length must equal the taal's matra count (16 for Teentaal).",
+      "items": { "$ref": "#/$defs/matra" }
+    }
+  },
+  "$defs": {
+    "matra": {
+      "type": "object",
+      "required": ["index", "notes"],
+      "additionalProperties": false,
+      "properties": {
+        "index": { "type": "integer", "minimum": 0, "description": "0-based matra index within the avartan." },
+        "notes": {
+          "type": "array",
+          "description": "1 or 2 note events occupying this matra (v1 caps at 2). Two notes split the matra into equal halves.",
+          "minItems": 1,
+          "maxItems": 2,
+          "items": { "$ref": "#/$defs/note" }
+        }
+      }
+    },
+    "note": {
+      "type": "object",
+      "required": ["kind"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["swar", "sustain"],
+          "description": "'swar' = a struck note; 'sustain' ('-') = the previous note continues through this slot."
+        },
+        "swar": {
+          "type": "string",
+          "description": "Sargam symbol. Required when kind='swar'.",
+          "enum": ["S", "r", "R", "g", "G", "m", "M", "P", "d", "D", "n", "N"]
+        },
+        "octave": {
+          "type": "string",
+          "enum": ["mandra", "madhya", "taar"],
+          "default": "madhya",
+          "description": "mandra = lower (-12 semitones), madhya = middle, taar = upper (+12)."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+# Scaffolding pubspec. `flutter create` will regenerate/extend this on Day 2;
+# these are the dependencies the architecture implies.
+name: nicenagma
+description: Tabla lehra/nagma practice — human-sounding harmonium, machine-perfect laya.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.0            # talk to the render service
+  path_provider: ^2.1.0  # local cache dir for rendered loops
+  sqflite: ^2.3.0        # local library of user nagmas
+  # Gapless playback: pick ONE after the Day-2 soak test.
+  # just_audio: ^0.9.0   # candidate plugin; verify seamless looping first
+  # (else) native FFI player under ios/ + lib/services/loop_player.dart
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/nagmas/
