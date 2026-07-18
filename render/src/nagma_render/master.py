@@ -26,6 +26,18 @@ _MAX_WRAP_S = 0.6
 # deterministic/cacheable. Set wet=0 to disable.
 REVERB = {"seconds": 0.5, "wet": 0.08, "seed": 1}
 
+# Double-reed shimmer: real harmoniums have 2-3 slightly-detuned reeds per note
+# that beat against each other. We fake it with a subtle chorus (modulated
+# fractional delay), read circularly so the loop stays exact/seamless. Each LFO
+# runs a whole number of cycles across the loop. Set wet=0 to disable.
+CHORUS = {
+    "wet": 0.2,
+    "voices": [
+        {"base_ms": 12.0, "depth_ms": 2.5, "rate_hz": 0.7, "phase": 0.0},
+        {"base_ms": 19.0, "depth_ms": 3.0, "rate_hz": 1.1, "phase": 1.7},
+    ],
+}
+
 
 def _lazy_imports():
     try:
@@ -76,6 +88,10 @@ def master_loop(in_wav: str, out_wav: str, score: ExpressiveScore) -> int:
         ))
         body *= lfo[:, None]
 
+    # --- double-reed shimmer (harmonium chorus), before the room ------------
+    if CHORUS["wet"] > 0:
+        body = _chorus(np, body, sr, CHORUS)
+
     # --- room presence: convolution reverb, circular so the loop stays exact -
     if REVERB["wet"] > 0:
         body = _apply_reverb(np, body, sr, REVERB)
@@ -118,6 +134,33 @@ def _room_ir(np, sr: int, seconds: float, seed: int):
 
     ir[0, :] = 1.0                                 # keep the direct sound (dry) intact
     return ir
+
+
+def _chorus(np, audio, sr: int, params: dict):
+    """Subtle double-reed shimmer via modulated fractional delay (chorus).
+
+    Each voice reads the signal at a slowly-modulated delay; the pitch wobble it
+    creates beats against the dry signal like a harmonium's paired reeds. Reads
+    are circular (mod N) and each LFO completes a whole number of cycles across
+    the loop, so the output stays exactly loop-length and seamless.
+    """
+    wet = float(params["wet"])
+    n = audio.shape[0]
+    loop_s = n / sr
+    idx = np.arange(n)
+    chorused = np.zeros_like(audio)
+    voices = params["voices"]
+    for v in voices:
+        cycles = max(1, round(v["rate_hz"] * loop_s))         # whole cycles -> seamless
+        lfo = np.sin(2 * math.pi * cycles * idx / n + v["phase"])
+        delay = (v["base_ms"] + v["depth_ms"] * lfo) * sr / 1000.0
+        read = (idx - delay) % n
+        i0 = np.floor(read).astype(np.int64)
+        frac = (read - i0)[:, None]
+        i1 = (i0 + 1) % n
+        chorused += audio[i0] * (1.0 - frac) + audio[i1] * frac
+    chorused /= len(voices)
+    return (1.0 - wet) * audio + wet * chorused
 
 
 def _apply_reverb(np, audio, sr: int, params: dict):
