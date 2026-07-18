@@ -1,15 +1,14 @@
 // The app<->render seam. This is the ONLY way the app obtains audio: it POSTs a
 // RenderRequest and caches the returned WAV by the same key the server uses.
 // The app knows nothing about synthesis — just JSON in, audio file out.
-//
-// Scaffolding: compiles conceptually against the planned deps (http,
-// path_provider, crypto). Wire into the player on Day 2.
 
 import 'dart:convert';
 import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
+
+import '../config.dart';
 
 class RenderRequest {
   final String nagmaText;
@@ -61,9 +60,18 @@ class RenderRequest {
   }
 }
 
+/// Raised when the service rejects the nagma (HTTP 422) — the message is the
+/// parser error, suitable to show inline in the editor.
+class NagmaRejected implements Exception {
+  final String message;
+  NagmaRejected(this.message);
+  @override
+  String toString() => message;
+}
+
 class RenderClient {
-  final String baseUrl; // e.g. http://192.168.1.10:8000
-  RenderClient(this.baseUrl);
+  final String baseUrl;
+  RenderClient([String? baseUrl]) : baseUrl = baseUrl ?? Config.renderBaseUrl;
 
   /// Returns a local file path to the rendered loop WAV, rendering (and caching)
   /// on a miss. Cached renders play fully offline.
@@ -73,17 +81,56 @@ class RenderClient {
     if (!cacheDir.existsSync()) cacheDir.createSync(recursive: true);
 
     final file = File('${cacheDir.path}/${req.cacheKey()}.wav');
-    if (file.existsSync()) return file.path;
+    if (file.existsSync() && file.lengthSync() > 0) return file.path;
 
-    final resp = await http.post(
-      Uri.parse('$baseUrl/render'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(req.toJson()),
-    );
-    if (resp.statusCode != 200) {
-      throw Exception('render failed (${resp.statusCode}): ${resp.body}');
+    final http.Response resp;
+    try {
+      resp = await http
+          .post(
+            Uri.parse('$baseUrl/render'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(req.toJson()),
+          )
+          .timeout(const Duration(seconds: 30));
+    } on SocketException catch (e) {
+      throw Exception(
+          'Cannot reach render service at $baseUrl. Is it running, and is the '
+          'phone on the same Wi-Fi as the Mac? ($e)');
     }
+
+    if (resp.statusCode == 422) {
+      // { "detail": "nagma parse error: ..." }
+      final detail = _detail(resp.body);
+      throw NagmaRejected(detail);
+    }
+    if (resp.statusCode != 200) {
+      throw Exception('render failed (${resp.statusCode}): ${_detail(resp.body)}');
+    }
+
     await file.writeAsBytes(resp.bodyBytes);
     return file.path;
+  }
+
+  /// Quick reachability + capability probe for a friendly startup banner.
+  Future<bool> healthy() async {
+    try {
+      final r = await http
+          .get(Uri.parse('$baseUrl/health'))
+          .timeout(const Duration(seconds: 4));
+      if (r.statusCode != 200) return false;
+      final m = jsonDecode(r.body) as Map<String, dynamic>;
+      return (m['ok'] == true) && (m['soundfont'] == true);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static String _detail(String body) {
+    try {
+      final m = jsonDecode(body) as Map<String, dynamic>;
+      return (m['detail'] ?? body).toString();
+    } catch (_) {
+      return body;
+    }
   }
 }

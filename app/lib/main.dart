@@ -1,36 +1,55 @@
-// App shell. Scaffolding placeholder for the Day-2 player screen (cycle wheel,
-// matra counter driven by audio clock, tempo + Sa controls, tanpura mix).
+// App shell. Owns the single PlayerController, kicks off the startup render, and
+// shows the player screen. Stage 1 (plays the default lehra), Stage 2 (tempo/Sa
+// re-render), and Stage 3 (editor + tanpura) are all wired here through the one
+// controller.
 
 import 'package:flutter/material.dart';
 
+import 'state/player_controller.dart';
+import 'screens/player_screen.dart';
+
 void main() => runApp(const NiceNagmaApp());
 
-class NiceNagmaApp extends StatelessWidget {
+class NiceNagmaApp extends StatefulWidget {
   const NiceNagmaApp({super.key});
+
+  @override
+  State<NiceNagmaApp> createState() => _NiceNagmaAppState();
+}
+
+class _NiceNagmaAppState extends State<NiceNagmaApp> {
+  final PlayerController _controller = PlayerController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Fire-and-forget: the controller flips `rendering`/`serviceHealthy` and the
+    // UI reacts. No await here so the first frame paints immediately.
+    _controller.init();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'NiceNagma',
-      theme: ThemeData(colorSchemeSeed: Colors.deepOrange, useMaterial3: true),
-      home: const _PlayerPlaceholder(),
-    );
-  }
-}
-
-class _PlayerPlaceholder extends StatelessWidget {
-  const _PlayerPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('NiceNagma')),
-      body: const Center(
-        child: Text(
-          'Player screen — Day 2.\nDefaults: Bhairavi, D Sa, 80 BPM.',
-          textAlign: TextAlign.center,
-        ),
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorSchemeSeed: Colors.deepOrange,
+        brightness: Brightness.light,
+        useMaterial3: true,
       ),
+      darkTheme: ThemeData(
+        colorSchemeSeed: Colors.deepOrange,
+        brightness: Brightness.dark,
+        useMaterial3: true,
+      ),
+      home: PlayerScreen(controller: _controller),
     );
   }
 }

@@ -54,6 +54,10 @@ class RenderBody(BaseModel):
 
 def _cache_key(body: RenderBody) -> str:
     h = hashlib.sha256()
+    # Compact separators + sorted keys so this canonical form is byte-identical
+    # to the app's Dart `jsonEncode` (RenderRequest.cacheKey), letting client and
+    # server agree on the key. `bpm` is a float here (pydantic-coerced), matching
+    # Dart's double, so 80 -> "80.0" on both sides.
     h.update(
         json.dumps(
             {
@@ -67,6 +71,7 @@ def _cache_key(body: RenderBody) -> str:
                 "laya": body.laya,  # None => auto from bpm
             },
             sort_keys=True,
+            separators=(",", ":"),
         ).encode()
     )
     return h.hexdigest()[:24]

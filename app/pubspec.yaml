@@ -1,5 +1,6 @@
-# Scaffolding pubspec. `flutter create` will regenerate/extend this on Day 2;
-# these are the dependencies the architecture implies.
+# `flutter create . ` preserves this file (it skips an existing pubspec). These
+# are the deps the app actually imports today; add sqflite when the local nagma
+# library lands.
 name: nicenagma
 description: Tabla lehra/nagma practice — human-sounding harmonium, machine-perfect laya.
 publish_to: "none"
@@ -13,10 +14,8 @@ dependencies:
     sdk: flutter
   http: ^1.2.0            # talk to the render service
   path_provider: ^2.1.0  # local cache dir for rendered loops
-  sqflite: ^2.3.0        # local library of user nagmas
-  # Gapless playback: pick ONE after the Day-2 soak test.
-  # just_audio: ^0.9.0   # candidate plugin; verify seamless looping first
-  # (else) native FFI player under ios/ + lib/services/loop_player.dart
+  crypto: ^3.0.3         # cache-key hashing, must match the server's key
+  cupertino_icons: ^1.0.6
 
 dev_dependencies:
   flutter_test:
@@ -25,5 +24,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  assets:
-    - assets/nagmas/
+  # No bundled assets yet: the default lehra is embedded in lib/config.dart and
+  # all audio is fetched from the render service, so the app needs none.
