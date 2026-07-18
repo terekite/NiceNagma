@@ -91,6 +91,19 @@ def test_distinct_pitches_keep_legato_overlap():
     assert a.start_s + a.dur_s > b.start_s, "distinct-pitch legato overlap was lost"
 
 
+def test_swell_set_and_scales_with_duration():
+    # matra index 3 ("m,P") splits into two half-length notes; the full-length
+    # matras hold longer and should swell more than the split halves.
+    doc = parse_nagma("S R g m,P | P m g r | P d n S' | n d P m")
+    score = compile_score(doc, bpm=70, sa="C", avartans=1, seed=1)
+    for e in score.events:
+        assert 0.0 <= e.swell <= 0.5
+    full = [e for e in score.events if e.matra == 0]        # whole matra
+    split = [e for e in score.events if e.matra == 3]       # split -> half length
+    assert len(split) == 2
+    assert sum(e.swell for e in full) / len(full) > sum(e.swell for e in split) / len(split)
+
+
 def test_wrong_matra_count_rejected():
     doc = parse_nagma(STOCK)
     doc.matras = doc.matras[:15]

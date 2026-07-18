@@ -8,7 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - `contracts/` — the three JSON Schemas (`NagmaDoc`, `ExpressiveScore`, `RenderRequest`) are written and frozen.
 - `core/` — **implemented and tested** (18 tests, pure stdlib): taal defs, sargam parser, compiler, performance model, `nagma-compile` CLI.
-- `render/` — **implemented and renders end-to-end**; mastering tested (`master.py`, seam-wrap + bellows + **circular-convolution room reverb** + loudness). fluidsynth call isolated behind `sampler.py` (algorithmic reverb off; the room IR is in mastering). `nagma-render` CLI + FastAPI service + Dockerfile present. `./scripts/smoke.sh` produces a real WAV, exact loop length.
+- `render/` — **implemented and renders end-to-end**; tested. `master.py`: seam-wrap + bellows LFO + **double-reed shimmer (chorus)** + **circular-convolution room reverb** + loudness. `midi.py`: **multi-channel allocator with per-note CC11 bellows swell** (Phase B). fluidsynth call isolated behind `sampler.py` (its reverb/chorus off). `nagma-render` CLI + FastAPI service + Dockerfile present. `./scripts/smoke.sh` produces a real WAV, exact loop length.
+  - **Schema note:** the frozen `ExpressiveScore` gained an optional per-note `swell` field in Phase B (justified: intra-note dynamics). Contracts otherwise stay frozen — call out any further change.
 - `app/` — **scaffolded only** (Flutter). Real project not bootstrapped yet (Flutter/Xcode not installed). The render HTTP client (`lib/services/render_client.dart`) is the one implemented seam.
 - `assets/` — `LICENSES.md` + stock/proposed nagmas + **committed multisample `soundfonts/harmonium.sf2`** (CC0, built by `scripts/build_harmonium.py` from freesound #330410; one sample per semitone C2–D5, preset bank 0/program 0). Timbre + room presence are the Phase-A realism work (see `.claude/plans/`).
 

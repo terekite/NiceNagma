@@ -55,7 +55,14 @@
         "velocity": { "type": "integer", "minimum": 1, "maximum": 127 },
         "matra": { "type": "integer", "minimum": 0, "description": "Matra index within its avartan." },
         "avartan": { "type": "integer", "minimum": 0, "description": "Which cycle of the super-loop this event belongs to." },
-        "structural": { "type": "boolean", "description": "True if this note lands on a matra boundary (no timing jitter applied)." }
+        "structural": { "type": "boolean", "description": "True if this note lands on a matra boundary (no timing jitter applied)." },
+        "swell": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0,
+          "description": "Intra-note bellows swell depth (Phase B). The note begins at (1-swell) of full expression and rises to full over its attack, modeling a harmonium player's bellows building pressure. 0 = flat/held. Rendered as CC11 automation."
+        }
       }
     }
   }

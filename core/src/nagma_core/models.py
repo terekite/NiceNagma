@@ -88,6 +88,7 @@ class Event:
     matra: int
     avartan: int
     structural: bool
+    swell: float = 0.0  # intra-note bellows swell depth (0..1); see contract
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -98,6 +99,7 @@ class Event:
             "matra": self.matra,
             "avartan": self.avartan,
             "structural": self.structural,
+            "swell": self.swell,
         }
 
     @classmethod
@@ -105,7 +107,7 @@ class Event:
         return cls(
             start_s=d["start_s"], dur_s=d["dur_s"], midi=d["midi"],
             velocity=d["velocity"], matra=d["matra"], avartan=d["avartan"],
-            structural=d["structural"],
+            structural=d["structural"], swell=d.get("swell", 0.0),
         )
 
 

@@ -38,6 +38,12 @@ VELOCITY_NOISE = 4
 BELLOWS_RATE_HZ = 0.25
 BELLOWS_DEPTH = 0.09
 
+# Intra-note bellows swell: a note starts softer and rises to full expression
+# over its attack (the player's bellows building pressure). Depth scales with
+# note length — longer notes breathe more; a fast note barely swells.
+SWELL_MAX_DEPTH = 0.20
+SWELL_FULL_AT_S = 0.8   # notes this long or longer get full depth
+
 _VELOCITY_MIN = 24
 _VELOCITY_MAX = 122
 
@@ -85,6 +91,15 @@ def base_velocity(matra: int, mark: str, matra_count: int) -> int:
 def apply_velocity_noise(rng: random.Random, velocity: int) -> int:
     v = velocity + rng.randint(-VELOCITY_NOISE, VELOCITY_NOISE)
     return max(_VELOCITY_MIN, min(_VELOCITY_MAX, v))
+
+
+def swell_depth(rng: random.Random, dur_s: float, structural: bool) -> float:
+    """Per-note intra-note swell depth in [0, ~0.5]. Longer notes breathe more."""
+    d = SWELL_MAX_DEPTH * min(1.0, dur_s / SWELL_FULL_AT_S)
+    if structural:
+        d *= 0.8                      # accented onsets are a touch firmer
+    d *= 0.85 + 0.3 * rng.random()    # per-note variation
+    return round(max(0.0, min(0.5, d)), 3)
 
 
 def bellows_params() -> dict[str, float]:

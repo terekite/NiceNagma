@@ -114,6 +114,7 @@ def compile_score(
             start = cycle_offset + ev["start_s"] + jitter
             vel = perf.base_velocity(ev["matra"], ev["mark"], matra_count)
             vel = perf.apply_velocity_noise(rng, vel)
+            swell = perf.swell_depth(rng, ev["dur_s"], ev["structural"])
             events.append(
                 Event(
                     start_s=start,
@@ -123,6 +124,7 @@ def compile_score(
                     matra=ev["matra"],
                     avartan=a,
                     structural=ev["structural"],
+                    swell=swell,
                 )
             )
 
