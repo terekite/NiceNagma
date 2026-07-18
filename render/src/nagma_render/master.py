@@ -21,6 +21,11 @@ from nagma_core.models import ExpressiveScore
 # Max overhang (seconds) to wrap from the tail onto the head.
 _MAX_WRAP_S = 0.6
 
+# Convolution room reverb: subtle "in the room with you" presence. Applied
+# circularly so the loop stays exact-length and seamless. seed keeps it
+# deterministic/cacheable. Set wet=0 to disable.
+REVERB = {"seconds": 0.5, "wet": 0.08, "seed": 1}
+
 
 def _lazy_imports():
     try:
@@ -71,12 +76,69 @@ def master_loop(in_wav: str, out_wav: str, score: ExpressiveScore) -> int:
         ))
         body *= lfo[:, None]
 
+    # --- room presence: convolution reverb, circular so the loop stays exact -
+    if REVERB["wet"] > 0:
+        body = _apply_reverb(np, body, sr, REVERB)
+
     # --- loudness normalize -------------------------------------------------
     body = _normalize(np, body, sr)
 
     sf.write(out_wav, body, sr, subtype="PCM_16")
     assert body.shape[0] == n, "mastered loop length must equal loop_length_samples"
     return body.shape[0]
+
+
+def _room_ir(np, sr: int, seconds: float, seed: int):
+    """Procedurally generate a small stereo room impulse response (CC0-free).
+
+    A few early reflections + a decorrelated, low-passed, exponentially-decaying
+    diffuse tail per channel. Deterministic given the seed, so renders stay
+    byte-reproducible (cacheable).
+    """
+    length = int(seconds * sr)
+    rng = np.random.default_rng(seed)
+    ir = np.zeros((length, 2))
+
+    # sparse early reflections (ms -> samples), slightly different per channel
+    for ch in range(2):
+        taps = [(0.011, 0.6), (0.019, 0.45), (0.027, 0.5), (0.038, 0.32),
+                (0.053, 0.28), (0.071, 0.22)]
+        for t_s, g in taps:
+            idx = int((t_s + rng.uniform(-0.002, 0.002)) * sr)
+            if 0 < idx < length:
+                ir[idx, ch] += g * (1.0 + rng.uniform(-0.15, 0.15))
+
+    # diffuse tail: decorrelated noise * exponential decay, gently low-passed
+    t = np.arange(length) / sr
+    decay = np.exp(-t / (seconds * 0.33))
+    for ch in range(2):
+        noise = rng.standard_normal(length) * decay * 0.5
+        k = np.hanning(9); k /= k.sum()           # mild high-freq rolloff (room absorbs highs)
+        ir[:, ch] += np.convolve(noise, k, mode="same")
+
+    ir[0, :] = 1.0                                 # keep the direct sound (dry) intact
+    return ir
+
+
+def _apply_reverb(np, audio, sr: int, params: dict):
+    """Add convolution reverb via CIRCULAR convolution (length-preserving).
+
+    Circular convolution means the reverb tail from the end of the loop folds
+    into its head — exactly right for a seamless loop, and it keeps the output
+    length == input length so the exact-loop-length gate still holds.
+    """
+    n = audio.shape[0]
+    ir = _room_ir(np, sr, params["seconds"], params["seed"])
+    wet = float(params["wet"])
+    out = audio.copy()
+    for ch in range(audio.shape[1]):
+        ir_ch = ir[:, ch % ir.shape[1]]
+        irp = np.zeros(n)
+        m = min(len(ir_ch), n)
+        irp[:m] = ir_ch[:m]
+        conv = np.fft.irfft(np.fft.rfft(audio[:, ch]) * np.fft.rfft(irp), n=n)
+        out[:, ch] = (1.0 - wet) * audio[:, ch] + wet * conv
+    return out
 
 
 def _normalize(np, audio, sr: int):

@@ -6,34 +6,31 @@ its license recorded here before it lands. This is a Day-1 risk-control item
 
 | File | Type | Source | License | Commercial OK? | Notes |
 |------|------|--------|---------|----------------|-------|
-| `soundfonts/harmonium.sf2` | Soundfont | Musical Artifacts #2127 | **CC-BY 4.0** | ✅ yes (with attribution) | See attribution below. |
-| `tanpura/*.wav` | Loop | _TBD_ | _TBD_ | _verify_ | Per-key loops or one pitch-shifted loop (open question §11.4). |
-| `nagmas/bhairavi-teentaal.nagma` | Text | Original (this repo) | Repo license | Yes | Stock Bhairavi lehra. |
+| `soundfonts/harmonium.sf2` | Soundfont (built) | freesound #330410 | **CC0 / public domain** | ✅ yes, no strings | Built by `scripts/build_harmonium.py`. See below. |
+| `tanpura/harmonium_drone_*.wav` | Drone | freesound #330410 | **CC0 / public domain** | ✅ yes, no strings | The 3 drones from the same CC0 recording (not wired in yet). |
+| `nagmas/*.nagma` | Text | Original (this repo) | Repo license | Yes | Stock/proposed lehras. |
 
-## `soundfonts/harmonium.sf2` — attribution (CC-BY 4.0)
+## `soundfonts/harmonium.sf2` — source (CC0, no attribution required)
 
-CC-BY requires we credit the author, name the work, link it, state the license,
-and indicate any changes. All satisfied here:
+The harmonium is a **multisampled SF2 built in-repo** (one real sample per
+semitone, C2–D5, with seamless crossfade loops) from a CC0 studio recording:
 
-- **Work:** "Wetthasinghe Harmonium General Midi Version"
-- **Author:** W. D. Tharinda Perera (harmonium sampled by Duwindu Tharinda from
-  his grandfather's "Sarapina" harmonium); General MIDI layout by *Mike77154*.
-- **Source:** https://musical-artifacts.com/artifacts/2127
-- **License:** Creative Commons Attribution 4.0 International (CC-BY 4.0) —
-  https://creativecommons.org/licenses/by/4.0/
-- **Changes made:** renamed the file to `harmonium.sf2`. The audio/soundfont
-  data is unmodified. Single preset "Harmonium" at bank 0, program 20.
-- **SHA-256:** `458d43f6e1ba670ad9b2995724c84343faf8565a9c82b16d82f3e6e97f9a53f8`
+- **Source recording:** "Harmonium Samples – All Keys and Drones" by **Donya Quick**
+- **URL:** https://freesound.org/people/donyaquick/sounds/330410/
+- **License:** **Creative Commons 0 (CC0 1.0) — public domain.** Commercial use
+  is allowed with **no attribution required and no restrictions.** (Credit is
+  appreciated but not legally required.)
+- **Build:** `./scripts/build_harmonium.py` fetches the CC0 HQ preview from the
+  public freesound CDN, slices per-note samples, makes crossfade loops, and
+  authors the SF2. For top quality, drop the lossless 96 kHz WAV (needs a free
+  freesound login) into `assets/soundfonts/raw/` and rebuild.
 
-Reproduce the download (verifies the hash): `./scripts/fetch_soundfont.sh`.
-
-> The in-app "Credits/Licenses" screen must surface this attribution before a
-> public release (CC-BY obligation).
+> No in-app attribution screen is legally required (CC0). The previous CC-BY
+> "Wetthasinghe" soundfont was replaced by this CC0 multisample.
 
 ## Checklist before shipping a paid build
-- [x] Soundfont license permits commercial use (CC-BY 4.0 — attribution required).
-- [ ] CC-BY attribution shown in an in-app credits screen.
-- [ ] Tanpura loop license verified.
+- [x] Soundfont license permits commercial use with no strings (CC0).
+- [ ] Tanpura loop license verified (drones above are CC0; final tanpura TBD).
 - [ ] No YouTube-sourced audio anywhere in the pipeline (spec §6 Path 3, dropped).
-- [ ] (Optional upgrade, spec §6 Path 2) swap to self-recorded harmonium samples
-      for a fully-owned library.
+- [ ] (Optional upgrade, spec §6 Path 2) self-record a harmonium for an even
+      higher-quality, fully-owned library.

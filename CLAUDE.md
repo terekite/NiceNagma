@@ -8,9 +8,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - `contracts/` — the three JSON Schemas (`NagmaDoc`, `ExpressiveScore`, `RenderRequest`) are written and frozen.
 - `core/` — **implemented and tested** (18 tests, pure stdlib): taal defs, sargam parser, compiler, performance model, `nagma-compile` CLI.
-- `render/` — **implemented and renders end-to-end**; mastering tested (`master.py`, seam-wrap + bellows + loudness). fluidsynth call isolated behind `sampler.py`. `nagma-render` CLI + FastAPI service + Dockerfile present. `./scripts/smoke.sh` produces a real WAV (verified: Bhairavi/D/80 BPM/4 avartans → exactly 2,116,800 frames, RMS 0.107).
+- `render/` — **implemented and renders end-to-end**; mastering tested (`master.py`, seam-wrap + bellows + **circular-convolution room reverb** + loudness). fluidsynth call isolated behind `sampler.py` (algorithmic reverb off; the room IR is in mastering). `nagma-render` CLI + FastAPI service + Dockerfile present. `./scripts/smoke.sh` produces a real WAV, exact loop length.
 - `app/` — **scaffolded only** (Flutter). Real project not bootstrapped yet (Flutter/Xcode not installed). The render HTTP client (`lib/services/render_client.dart`) is the one implemented seam.
-- `assets/` — dir structure + `LICENSES.md` + stock Bhairavi nagma + **bundled CC-BY 4.0 `soundfonts/harmonium.sf2`** (Musical Artifacts #2127, preset at bank 0/program 20; re-fetch via `./scripts/fetch_soundfont.sh`).
+- `assets/` — `LICENSES.md` + stock/proposed nagmas + **committed multisample `soundfonts/harmonium.sf2`** (CC0, built by `scripts/build_harmonium.py` from freesound #330410; one sample per semitone C2–D5, preset bank 0/program 0). Timbre + room presence are the Phase-A realism work (see `.claude/plans/`).
 
 The audio stage needs `fluidsynth` on PATH (macOS: `brew install fluid-synth`) plus the Python render deps (`mido`, `numpy`, `soundfile`); the soundfont is now committed. Treat the spec as source of truth and keep this file current as packages evolve.
 

@@ -46,6 +46,27 @@ def test_mastered_loop_is_exact_length(tmp_path):
     assert data.shape[0] == score.loop_length_samples
 
 
+def test_reverb_preserves_exact_length_and_seam(tmp_path):
+    # Convolution reverb must be circular: output length == loop_length_samples,
+    # and the loop seam (last sample -> first sample) must stay continuous.
+    import nagma_render.master as master
+    score = _score(bpm=120, avartans=2)
+    raw = tmp_path / "raw.wav"
+    out = tmp_path / "loop.wav"
+    _write_fake_render(str(raw), score, overhang_s=0.0)
+
+    assert master.REVERB["wet"] > 0, "reverb should be enabled by default"
+    frames = master_loop(str(raw), str(out), score)
+    assert frames == score.loop_length_samples
+
+    data, _ = sf.read(str(out), always_2d=True)
+    # Seam jump (wrap) should be no worse than a typical internal jump — circular
+    # convolution introduces no discontinuity at the loop point.
+    internal = np.max(np.abs(np.diff(data[:, 0])))
+    seam = abs(data[0, 0] - data[-1, 0])
+    assert seam <= internal + 1e-6
+
+
 def test_short_render_is_padded_to_exact_length(tmp_path):
     score = _score(avartans=1)
     raw = tmp_path / "raw.wav"

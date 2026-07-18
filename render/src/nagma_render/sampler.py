@@ -40,7 +40,8 @@ def render_midi_to_wav(
         "-F", wav_path,            # render to file
         "-r", str(sample_rate),    # sample rate
         "-g", str(gain),           # master gain
-        "-R", "1",                 # reverb on (subtle room helps harmonium)
+        "-R", "0",                 # algorithmic reverb OFF (mastering adds a room IR)
+        "-C", "0",                 # chorus OFF
         soundfont_path,
         midi_path,
     ]

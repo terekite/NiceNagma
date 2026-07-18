@@ -15,10 +15,9 @@ _US_PER_BEAT = 500_000
 _SEC_PER_BEAT = _US_PER_BEAT / 1_000_000.0
 _TICKS_PER_BEAT = 960
 
-# General MIDI: harmonium is not a GM instrument; 20 = Reed Organ is the closest
-# stand-in and is overridden anyway when a real harmonium soundfont is loaded
-# (single-preset SF2s ignore program change).
-DEFAULT_PROGRAM = 20
+# Our multisampled harmonium SF2 (scripts/build_harmonium.py) puts its single
+# preset at bank 0, program 0. Select it explicitly.
+DEFAULT_PROGRAM = 0
 
 
 def _sec_to_ticks(seconds: float) -> int:
