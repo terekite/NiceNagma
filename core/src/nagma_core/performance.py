@@ -93,6 +93,33 @@ def apply_velocity_noise(rng: random.Random, velocity: int) -> int:
     return max(_VELOCITY_MIN, min(_VELOCITY_MAX, v))
 
 
+# Grace notes (kan swar): a light, quick neighbour-swar flicked in just before a
+# main note. Applied sparingly and varied per avartan so it never sounds
+# rubber-stamped. The grace steals time from BEFORE the main onset, so matra
+# boundaries stay exact.
+GRACE_DENSITY = 0.12       # fraction of eligible notes that get a kan
+GRACE_DUR_S = 0.07         # sounding length of the grace
+GRACE_LEGATO_S = 0.03      # extra overlap so the grace slurs into the main note
+GRACE_MIN_MAIN_S = 0.30    # don't ornament very short notes (e.g. split halves)
+GRACE_VEL_SCALE = 0.68     # grace is softer than the main note
+
+
+def grace_rng(base_seed: int, avartan: int) -> random.Random:
+    """RNG for ornament placement — separate from the timing/dynamics RNG so
+    adding grace notes doesn't perturb the existing per-note feel."""
+    return random.Random((base_seed * 2246822519) ^ (avartan * 3266489917) ^ 0x85EBCA77)
+
+
+def kan_pitch(midi: int, pitch_set: list[int]) -> int | None:
+    """The neighbour swar to grace with: nearest composition pitch above the
+    main note (upper kan), else nearest below. In-mode by construction."""
+    higher = [p for p in pitch_set if p > midi]
+    if higher:
+        return min(higher)
+    lower = [p for p in pitch_set if p < midi]
+    return max(lower) if lower else None
+
+
 def swell_depth(rng: random.Random, dur_s: float, structural: bool) -> float:
     """Per-note intra-note swell depth in [0, ~0.5]. Longer notes breathe more."""
     d = SWELL_MAX_DEPTH * min(1.0, dur_s / SWELL_FULL_AT_S)

@@ -104,6 +104,24 @@ def test_swell_set_and_scales_with_duration():
     assert sum(e.swell for e in full) / len(full) > sum(e.swell for e in split) / len(split)
 
 
+def test_grace_notes_ornament_without_disturbing_the_grid():
+    doc = parse_nagma(STOCK)
+    score = compile_score(doc, bpm=70, sa="C", avartans=4, seed=42)
+    pitch_set = sorted({e.midi for e in score.events if e.structural})
+    graces = [e for e in score.events
+              if not e.structural and e.swell == 0.0 and e.dur_s < 0.12]
+    assert graces, "expected some kan grace notes at the default density"
+    for g in graces:
+        assert not g.structural                       # ornaments never structural
+        assert g.midi in pitch_set                    # kan is in-scale (composition pitches)
+    # Structural (matra-boundary) onsets must remain exact despite ornaments.
+    md = score.matra_dur_s
+    for e in score.events:
+        if e.structural:
+            expected = e.avartan * score.avartan_dur_s + e.matra * md
+            assert e.start_s == pytest.approx(expected, abs=1e-9)
+
+
 def test_wrong_matra_count_rejected():
     doc = parse_nagma(STOCK)
     doc.matras = doc.matras[:15]

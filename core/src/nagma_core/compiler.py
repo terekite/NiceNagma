@@ -105,9 +105,12 @@ def compile_score(
         ev["dur_s"] += perf.LEGATO_OVERLAP_S
 
     # --- expand across avartans with per-cycle variation (invariant #2) ---
+    pitch_set = sorted({ev["midi"] for ev in base})
+
     events: list[Event] = []
     for a in range(avartans):
         rng = perf.avartan_rng(seed, a)
+        grng = perf.grace_rng(seed, a)  # separate stream: graces don't perturb feel
         cycle_offset = a * avartan_dur_s
         for ev in base:
             jitter = perf.timing_jitter(rng, ev["structural"])
@@ -127,6 +130,24 @@ def compile_score(
                     swell=swell,
                 )
             )
+            # Kan swar: sparingly flick a neighbour swar in just before this note.
+            # It steals time from BEFORE the exact onset, so the grid is untouched.
+            if ev["dur_s"] >= perf.GRACE_MIN_MAIN_S and grng.random() < perf.GRACE_DENSITY:
+                kan = perf.kan_pitch(ev["midi"], pitch_set)
+                gstart = start - perf.GRACE_DUR_S
+                if kan is not None and kan != ev["midi"] and gstart >= cycle_offset:
+                    events.append(
+                        Event(
+                            start_s=gstart,
+                            dur_s=perf.GRACE_DUR_S + perf.GRACE_LEGATO_S,
+                            midi=kan,
+                            velocity=max(1, int(vel * perf.GRACE_VEL_SCALE)),
+                            matra=ev["matra"],
+                            avartan=a,
+                            structural=False,
+                            swell=0.0,
+                        )
+                    )
 
     events.sort(key=lambda e: e.start_s)
 
