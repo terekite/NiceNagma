@@ -20,9 +20,9 @@ trap 'rm -rf "$WORK"' EXIT
 SCORE="$WORK/score.json"
 LOOP="$WORK/loop.wav"
 
-NAGMA="assets/nagmas/bhairavi-teentaal.nagma"
+NAGMA="assets/nagmas/proposed-teentaal.nagma"
 BPM="${BPM:-80}"
-SA="${SA:-D}"
+SA="${SA:-C}"
 AVARTANS="${AVARTANS:-4}"
 
 echo "==> compile: $NAGMA  (BPM=$BPM Sa=$SA avartans=$AVARTANS)"

@@ -11,7 +11,7 @@ from __future__ import annotations
 import os
 import tempfile
 
-from nagma_core.compiler import compile_score
+from nagma_core.compiler import realize
 from nagma_core.models import ExpressiveScore
 from nagma_core.parser import parse_nagma
 
@@ -62,10 +62,16 @@ def render_request(
     avartans: int = 4,
     seed: int = 0,
     instrument: str = "harmonium",
+    laya: str | None = None,
 ) -> str:
-    """Parse -> compile -> render, the path the HTTP service takes."""
+    """Parse -> realize-for-laya -> render, the path the HTTP service takes.
+
+    The user authors the vilambit; `realize` picks a laya from `bpm` (or an
+    explicit `laya` override) and reduces the melody to it before compiling.
+    """
     doc = parse_nagma(nagma_text, taal=taal)
-    score = compile_score(
-        doc, bpm=bpm, sa=sa, avartans=avartans, seed=seed, instrument=instrument
+    score = realize(
+        doc, bpm=bpm, sa=sa, laya=laya, avartans=avartans, seed=seed,
+        instrument=instrument,
     )
     return render_score(score, soundfont_path, out_wav)

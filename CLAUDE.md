@@ -58,7 +58,7 @@ These are the product's entire reason to exist — do not compromise them for co
 
 ## Commands
 
-- Compile text nagma → score: `PYTHONPATH=core/src python3 -m nagma_core.cli assets/nagmas/bhairavi-teentaal.nagma --bpm 80 --sa D -o score.json` (or `nagma-compile ...` once installed).
+- Compile text nagma → score: `PYTHONPATH=core/src python3 -m nagma_core.cli assets/nagmas/proposed-teentaal.nagma --bpm 80 --sa C -o score.json` (or `nagma-compile ...` once installed). Auto-selects the laya realization from `--bpm` (`--laya` to force one).
 - Render a loop from a score: `nagma-render score.json -o loop.wav --soundfont assets/soundfonts/harmonium.sf2` (or set `NAGMA_SOUNDFONT`). Needs fluidsynth + a soundfont.
 - End-to-end smoke test (**the primary correctness gate**): `./scripts/smoke.sh`. Text nagma → score → WAV, asserting **exact loop length** via `scripts/assert_loop_length.py`. The score stage runs on pure stdlib; the WAV stage runs only when fluidsynth + a soundfont are present, else it skips with a notice. Wired into `.github/workflows/ci.yml`.
 - Tests: `cd core && PYTHONPATH=src pytest -q` (no deps); `cd render && pytest -q` (needs numpy/soundfile).

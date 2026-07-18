@@ -10,8 +10,9 @@ import argparse
 import json
 import sys
 
-from .compiler import compile_score
+from .compiler import realize
 from .parser import NagmaParseError, parse_nagma
+from .reduce import laya_for_bpm
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -27,6 +28,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--avartans", type=int, default=4)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--sample-rate", type=int, default=44100)
+    p.add_argument(
+        "--laya", choices=["vilambit", "madhya", "drut"],
+        help="Force a laya realization (default: auto-selected from --bpm).",
+    )
     p.add_argument("-o", "--output", help="Output score.json path (default stdout).")
     args = p.parse_args(argv)
 
@@ -38,10 +43,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"nagma parse error: {e}", file=sys.stderr)
         return 2
 
-    score = compile_score(
+    score = realize(
         doc,
         bpm=args.bpm,
         sa=args.sa,
+        laya=args.laya,
         avartans=args.avartans,
         seed=args.seed,
         sample_rate=args.sample_rate,
@@ -51,8 +57,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.output:
         with open(args.output, "w") as f:
             f.write(payload)
+        laya = args.laya or laya_for_bpm(args.bpm)
         print(
-            f"wrote {args.output}  "
+            f"wrote {args.output}  [{laya}]  "
             f"({score.loop_length_samples} frames @ {score.sample_rate} Hz, "
             f"{len(score.events)} events)",
             file=sys.stderr,

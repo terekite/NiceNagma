@@ -38,9 +38,9 @@
         "index": { "type": "integer", "minimum": 0, "description": "0-based matra index within the avartan." },
         "notes": {
           "type": "array",
-          "description": "1 or 2 note events occupying this matra (v1 caps at 2). Two notes split the matra into equal halves.",
+          "description": "1 to 4 note/sustain events subdividing this matra into equal slots (chaugun). This is the authored (vilambit) density; faster layas are derived by reduction. '-' sustains a slot for uneven rhythms.",
           "minItems": 1,
-          "maxItems": 2,
+          "maxItems": 4,
           "items": { "$ref": "#/$defs/note" }
         }
       }

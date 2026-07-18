@@ -57,11 +57,15 @@ def _parse_note(token: str, *, vibhag_no: int, matra_no: int) -> Note:
 
 
 def _parse_matra(cell: str, *, vibhag_no: int, matra_no: int) -> list[Note]:
+    # A matra may be subdivided into up to 4 equal slots (chaugun) via ',' — this
+    # is the density a slow (vilambit) lehra needs. '-' sustains a slot, which
+    # covers uneven rhythms (e.g. 'S,-,g,m'). Faster layas are derived by reducing
+    # this authored density (see reduce.py), so authoring is done at max density.
     parts = [p for p in cell.split(",")]
-    if len(parts) > 2:
+    if len(parts) > 4:
         raise NagmaParseError(
             f"Matra {matra_no} in vibhag {vibhag_no} has {len(parts)} notes; "
-            f"v1 allows at most 2 (split with a single ',')."
+            f"a matra allows at most 4 subdivisions (split with ',')."
         )
     return [
         _parse_note(p, vibhag_no=vibhag_no, matra_no=matra_no) for p in parts

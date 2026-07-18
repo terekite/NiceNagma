@@ -9,14 +9,18 @@ Public surface:
 
 from __future__ import annotations
 
-from .compiler import compile_score
+from .compiler import compile_score, realize
 from .models import Event, ExpressiveScore, Matra, NagmaDoc, Note
 from .parser import NagmaParseError, parse_nagma
+from .reduce import laya_for_bpm, reduce_doc
 from .taal import TEENTAAL, Taal, get_taal
 
 __all__ = [
     "compile_score",
+    "realize",
     "parse_nagma",
+    "reduce_doc",
+    "laya_for_bpm",
     "NagmaParseError",
     "NagmaDoc",
     "ExpressiveScore",

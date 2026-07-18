@@ -19,6 +19,7 @@ class RenderRequest {
   final String taal;
   final int avartans;
   final int seed;
+  final String? laya; // null => auto-select from bpm (vilambit/madhya/drut)
 
   const RenderRequest({
     required this.nagmaText,
@@ -28,6 +29,7 @@ class RenderRequest {
     this.taal = 'teentaal',
     this.avartans = 4,
     this.seed = 0,
+    this.laya,
   });
 
   Map<String, dynamic> toJson() => {
@@ -39,6 +41,7 @@ class RenderRequest {
         'taal': taal,
         'avartans': avartans,
         'seed': seed,
+        'laya': laya,
         'format': 'wav',
       };
 
@@ -48,6 +51,7 @@ class RenderRequest {
       'avartans': avartans,
       'bpm': bpm,
       'instrument': instrument,
+      'laya': laya,
       'nagma': nagmaText.trim(),
       'sa': sa,
       'seed': seed,

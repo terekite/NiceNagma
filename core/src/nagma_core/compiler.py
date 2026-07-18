@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from .models import Event, ExpressiveScore, NagmaDoc
 from . import performance as perf
+from .reduce import laya_for_bpm, reduce_doc
 from .sargam import note_to_midi, sa_to_midi
 from .taal import get_taal
 
@@ -74,8 +75,11 @@ def compile_score(
     avartans: int = DEFAULT_AVARTANS,
     seed: int = 0,
     instrument: str = "harmonium",
+    grace_density: float | None = None,
 ) -> ExpressiveScore:
     """Compile a NagmaDoc into an ExpressiveScore super-loop."""
+    if grace_density is None:
+        grace_density = perf.GRACE_DENSITY
     if bpm <= 0:
         raise ValueError("bpm must be positive")
     if avartans < 1:
@@ -132,7 +136,7 @@ def compile_score(
             )
             # Kan swar: sparingly flick a neighbour swar in just before this note.
             # It steals time from BEFORE the exact onset, so the grid is untouched.
-            if ev["dur_s"] >= perf.GRACE_MIN_MAIN_S and grng.random() < perf.GRACE_DENSITY:
+            if ev["dur_s"] >= perf.GRACE_MIN_MAIN_S and grng.random() < grace_density:
                 kan = perf.kan_pitch(ev["midi"], pitch_set)
                 gstart = start - perf.GRACE_DUR_S
                 if kan is not None and kan != ev["midi"] and gstart >= cycle_offset:
@@ -179,4 +183,34 @@ def compile_score(
         events=events,
         seed=seed,
         bellows=perf.bellows_params(),
+    )
+
+
+def realize(
+    doc: NagmaDoc,
+    *,
+    bpm: float,
+    sa: str | int,
+    laya: str | None = None,
+    sample_rate: int = DEFAULT_SAMPLE_RATE,
+    avartans: int = DEFAULT_AVARTANS,
+    seed: int = 0,
+    instrument: str = "harmonium",
+) -> ExpressiveScore:
+    """Author-once entry point: pick a laya from `bpm`, REDUCE the authored
+    (vilambit) doc to that laya, then compile — with ornament density scaled to
+    the laya. Pass `laya` to override the automatic BPM->laya selection.
+    """
+    if laya is None:
+        laya = laya_for_bpm(bpm)
+    reduced = reduce_doc(doc, laya)
+    return compile_score(
+        reduced,
+        bpm=bpm,
+        sa=sa,
+        sample_rate=sample_rate,
+        avartans=avartans,
+        seed=seed,
+        instrument=instrument,
+        grace_density=perf.GRACE_DENSITY_BY_LAYA.get(laya, perf.GRACE_DENSITY),
     )

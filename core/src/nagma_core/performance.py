@@ -97,7 +97,9 @@ def apply_velocity_noise(rng: random.Random, velocity: int) -> int:
 # main note. Applied sparingly and varied per avartan so it never sounds
 # rubber-stamped. The grace steals time from BEFORE the main onset, so matra
 # boundaries stay exact.
-GRACE_DENSITY = 0.12       # fraction of eligible notes that get a kan
+GRACE_DENSITY = 0.12       # default fraction of eligible notes that get a kan
+# Ornamentation thins as tempo rises (research: "reduce ornamentation" at drut).
+GRACE_DENSITY_BY_LAYA = {"vilambit": 0.14, "madhya": 0.09, "drut": 0.03}
 GRACE_DUR_S = 0.07         # sounding length of the grace
 GRACE_LEGATO_S = 0.03      # extra overlap so the grace slurs into the main note
 GRACE_MIN_MAIN_S = 0.30    # don't ornament very short notes (e.g. split halves)

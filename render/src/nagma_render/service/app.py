@@ -48,6 +48,7 @@ class RenderBody(BaseModel):
     taal: str = "teentaal"
     avartans: int = 4
     seed: int = 0
+    laya: str | None = None  # override the auto BPM->laya realization
     format: str = "wav"
 
 
@@ -63,6 +64,7 @@ def _cache_key(body: RenderBody) -> str:
                 "taal": body.taal,
                 "avartans": body.avartans,
                 "seed": body.seed,
+                "laya": body.laya,  # None => auto from bpm
             },
             sort_keys=True,
         ).encode()
@@ -102,6 +104,7 @@ def render(body: RenderBody) -> FileResponse:
                 avartans=body.avartans,
                 seed=body.seed,
                 instrument=body.instrument,
+                laya=body.laya,
             )
         except SamplerNotAvailable as e:
             raise HTTPException(503, str(e)) from None

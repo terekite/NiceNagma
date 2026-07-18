@@ -43,7 +43,7 @@ text nagma → NagmaDoc → ExpressiveScore (exact-time events + dynamics/legato
 ```bash
 # 1. Compile a text nagma to a score (pure stdlib, works today):
 PYTHONPATH=core/src python3 -m nagma_core.cli \
-    assets/nagmas/bhairavi-teentaal.nagma --bpm 80 --sa D --avartans 4 -o score.json
+    assets/nagmas/proposed-teentaal.nagma --bpm 80 --sa C --avartans 4 -o score.json
 
 # 2. Render to a gapless loop WAV (needs fluidsynth + a soundfont):
 brew install fluid-synth          # one-time
@@ -58,7 +58,7 @@ PYTHONPATH=core/src:render/src NAGMA_SOUNDFONT=assets/soundfonts/harmonium.sf2 \
 With `uv` (recommended once deps are needed):
 ```bash
 uv sync                           # installs the workspace (core + render)
-uv run nagma-compile assets/nagmas/bhairavi-teentaal.nagma --bpm 80 --sa D -o score.json
+uv run nagma-compile assets/nagmas/proposed-teentaal.nagma --bpm 80 --sa C -o score.json
 uv run nagma-render score.json -o loop.wav --soundfont assets/soundfonts/harmonium.sf2
 ```
 

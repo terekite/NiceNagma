@@ -26,6 +26,12 @@
     "instrument": { "type": "string", "enum": ["harmonium"] },
     "avartans": { "type": "integer", "minimum": 1, "maximum": 8, "default": 4 },
     "seed": { "type": "integer", "default": 0, "description": "Base seed for per-avartan expressive variation. Same inputs + same seed => byte-identical render (cacheable)." },
+    "laya": {
+      "type": ["string", "null"],
+      "enum": ["vilambit", "madhya", "drut", null],
+      "default": null,
+      "description": "Override the laya realization. null (default) auto-selects from bpm: <=85 vilambit, 86-160 madhya, >160 drut. The user authors the vilambit; faster layas are derived by reduction."
+    },
     "format": { "type": "string", "enum": ["wav", "flac"], "default": "wav" }
   }
 }

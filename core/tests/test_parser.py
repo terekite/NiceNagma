@@ -52,9 +52,20 @@ def test_wrong_matra_count_in_vibhag_errors():
         parse_nagma("S r g | P d P m | g m P d | P m g r")
 
 
+def test_up_to_four_subdivisions_ok():
+    doc = parse_nagma("S,r,g,m R g m | P d P m | g m P d | P m g r")
+    assert len(doc.matras[0].notes) == 4
+    assert [n.swar for n in doc.matras[0].notes] == ["S", "r", "g", "m"]
+
+
+def test_subdivision_with_sustain_ok():
+    doc = parse_nagma("S,-,g,m R g m | P d P m | g m P d | P m g r")
+    assert doc.matras[0].notes[1].kind == "sustain"
+
+
 def test_too_many_notes_in_matra_errors():
-    with pytest.raises(NagmaParseError, match="at most 2"):
-        parse_nagma("S,r,g g m P | P d P m | g m P d | P m g r")
+    with pytest.raises(NagmaParseError, match="at most 4"):
+        parse_nagma("S,r,g,m,P g m R | P d P m | g m P d | P m g r")
 
 
 def test_leading_sustain_errors():
