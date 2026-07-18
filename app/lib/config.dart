@@ -11,6 +11,15 @@
 // exception `bootstrap.sh` writes into Info.plist.
 
 class Config {
+  // Which renderer produces loops:
+  //   'local' (default) — on-device: renders on the phone, free and offline.
+  //   'http'            — the Python render service at renderBaseUrl (LAN/cloud).
+  // Override at launch: flutter run --dart-define=RENDERER=http
+  static const String renderer =
+      String.fromEnvironment('RENDERER', defaultValue: 'local');
+
+  // Only used when renderer == 'http'. The one thing that changes between
+  // machines; point it at a LAN Mac or a cloud-hosted render service.
   static const String renderBaseUrl =
       String.fromEnvironment('RENDER_URL', defaultValue: 'http://127.0.0.1:8000');
 

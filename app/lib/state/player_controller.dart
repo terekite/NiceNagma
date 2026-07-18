@@ -14,15 +14,22 @@ import 'package:flutter/foundation.dart';
 
 import '../config.dart';
 import '../taal.dart';
+import '../render/reduce.dart' show layaForBpm;
 import '../services/loop_player.dart';
-import '../services/render_client.dart';
+import '../services/local_renderer.dart';
+import '../services/render_client.dart'; // re-exports LoopRenderer, RenderRequest, NagmaRejected
+
+/// Pick the renderer from Config.renderer: on-device by default, HTTP service
+/// when RENDERER=http. Both share the RenderRequest->WAV interface and cache key.
+LoopRenderer _defaultRenderer() =>
+    Config.renderer == 'http' ? HttpRenderClient() : LocalRenderer();
 
 class PlayerController extends ChangeNotifier {
-  final RenderClient _client;
+  final LoopRenderer _client;
   final LoopPlayer _player;
 
-  PlayerController({RenderClient? client, LoopPlayer? player})
-      : _client = client ?? RenderClient(),
+  PlayerController({LoopRenderer? client, LoopPlayer? player})
+      : _client = client ?? _defaultRenderer(),
         _player = player ?? LoopPlayer();
 
   // --- Params (a change to any of these triggers a re-render) ---
@@ -65,13 +72,10 @@ class PlayerController extends ChangeNotifier {
     await _renderAndLoad();
   }
 
-  /// The laya band the server will auto-select for the current BPM, for display.
-  /// Mirrors core's reduction thresholds (vilambit < 60 <= madhya < 160 <= drut).
-  String get layaLabel {
-    if (bpm < 60) return 'vilambit';
-    if (bpm < 160) return 'madhya';
-    return 'drut';
-  }
+  /// The laya the renderer auto-selects for the current BPM, for display. Calls
+  /// the same `layaForBpm` the reducer uses, so the label always matches what
+  /// actually renders (vilambit <=85, madhya <=160, else drut).
+  String get layaLabel => layaForBpm(bpm);
 
   Future<void> togglePlay() async {
     if (rendering) return;

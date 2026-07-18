@@ -1,80 +1,24 @@
-// The app<->render seam. This is the ONLY way the app obtains audio: it POSTs a
-// RenderRequest and caches the returned WAV by the same key the server uses.
-// The app knows nothing about synthesis — just JSON in, audio file out.
+// HTTP render client: the cloud/LAN path. POSTs a RenderRequest to the Python
+// render service and caches the returned WAV by the shared cache key. Selected
+// via Config.renderer == 'http' (e.g. --dart-define=RENDERER=http). The default
+// build renders on-device (see LocalRenderer); this is what you'd point at a
+// cloud-hosted render service at scale.
 
 import 'dart:convert';
 import 'dart:io';
-import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
 import '../config.dart';
+import 'loop_renderer.dart';
 
-class RenderRequest {
-  final String nagmaText;
-  final double bpm;
-  final String sa; // e.g. "D", "C#"
-  final String instrument;
-  final String taal;
-  final int avartans;
-  final int seed;
-  final String? laya; // null => auto-select from bpm (vilambit/madhya/drut)
+export 'loop_renderer.dart' show RenderRequest, NagmaRejected, LoopRenderer;
 
-  const RenderRequest({
-    required this.nagmaText,
-    required this.bpm,
-    required this.sa,
-    this.instrument = 'harmonium',
-    this.taal = 'teentaal',
-    this.avartans = 4,
-    this.seed = 0,
-    this.laya,
-  });
-
-  Map<String, dynamic> toJson() => {
-        'schema_version': '1.0.0',
-        'nagma_text': nagmaText,
-        'bpm': bpm,
-        'sa': sa,
-        'instrument': instrument,
-        'taal': taal,
-        'avartans': avartans,
-        'seed': seed,
-        'laya': laya,
-        'format': 'wav',
-      };
-
-  // Must match the server's _cache_key ordering so client and server agree.
-  String cacheKey() {
-    final canonical = jsonEncode({
-      'avartans': avartans,
-      'bpm': bpm,
-      'instrument': instrument,
-      'laya': laya,
-      'nagma': nagmaText.trim(),
-      'sa': sa,
-      'seed': seed,
-      'taal': taal,
-    });
-    return sha256.convert(utf8.encode(canonical)).toString().substring(0, 24);
-  }
-}
-
-/// Raised when the service rejects the nagma (HTTP 422) — the message is the
-/// parser error, suitable to show inline in the editor.
-class NagmaRejected implements Exception {
-  final String message;
-  NagmaRejected(this.message);
-  @override
-  String toString() => message;
-}
-
-class RenderClient {
+class HttpRenderClient implements LoopRenderer {
   final String baseUrl;
-  RenderClient([String? baseUrl]) : baseUrl = baseUrl ?? Config.renderBaseUrl;
+  HttpRenderClient([String? baseUrl]) : baseUrl = baseUrl ?? Config.renderBaseUrl;
 
-  /// Returns a local file path to the rendered loop WAV, rendering (and caching)
-  /// on a miss. Cached renders play fully offline.
+  @override
   Future<String> getLoop(RenderRequest req) async {
     final dir = await getApplicationSupportDirectory();
     final cacheDir = Directory('${dir.path}/render-cache');
@@ -99,9 +43,7 @@ class RenderClient {
     }
 
     if (resp.statusCode == 422) {
-      // { "detail": "nagma parse error: ..." }
-      final detail = _detail(resp.body);
-      throw NagmaRejected(detail);
+      throw NagmaRejected(_detail(resp.body));
     }
     if (resp.statusCode != 200) {
       throw Exception('render failed (${resp.statusCode}): ${_detail(resp.body)}');
@@ -111,7 +53,7 @@ class RenderClient {
     return file.path;
   }
 
-  /// Quick reachability + capability probe for a friendly startup banner.
+  @override
   Future<bool> healthy() async {
     try {
       final r = await http

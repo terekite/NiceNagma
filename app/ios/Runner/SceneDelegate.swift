@@ -12,6 +12,7 @@ import UIKit
 
 class SceneDelegate: FlutterSceneDelegate {
   private var loopPlayer: LoopPlayer?
+  private var offlineRenderer: OfflineRenderer?
 
   override func scene(
     _ scene: UIScene,
@@ -21,6 +22,8 @@ class SceneDelegate: FlutterSceneDelegate {
     super.scene(scene, willConnectTo: session, options: connectionOptions)
     if let controller = window?.rootViewController as? FlutterViewController {
       loopPlayer = LoopPlayer(messenger: controller.binaryMessenger)
+      // On-device render pipeline (nicenagma/render). LocalRenderer calls it.
+      offlineRenderer = OfflineRenderer(messenger: controller.binaryMessenger)
     }
   }
 }

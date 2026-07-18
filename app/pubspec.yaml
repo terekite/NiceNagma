@@ -24,5 +24,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  # No bundled assets yet: the default lehra is embedded in lib/config.dart and
-  # all audio is fetched from the render service, so the app needs none.
+  # The harmonium soundfont is bundled for on-device rendering (~5.6 MB). It is
+  # materialized into app/assets/ from the canonical repo assets/ by bootstrap.sh
+  # (git-ignored there to avoid duplicating it in the app package). Future
+  # instruments are downloaded on demand, not bundled — see SoundfontProvider.
+  assets:
+    - assets/soundfonts/harmonium.sf2

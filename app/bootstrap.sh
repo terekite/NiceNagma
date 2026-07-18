@@ -37,10 +37,19 @@ cp "$SNAP/pubspec.yaml" pubspec.yaml
 rm -rf "$SNAP"
 
 RUNNER="ios/Runner"
-echo "==> installing native gapless loop player -> $RUNNER/{AppDelegate,SceneDelegate}.swift"
+echo "==> installing native audio (gapless loop player + on-device renderer) -> $RUNNER/{AppDelegate,SceneDelegate}.swift"
+# AppDelegate.swift holds both LoopPlayer and OfflineRenderer; SceneDelegate wires
+# their MethodChannels. Both files are already compiled by the generated .pbxproj,
+# so overwriting them needs no Xcode project surgery.
 cp native/AppDelegate.swift "$RUNNER/AppDelegate.swift"
-# Flutter 3.44+ uses the UIScene lifecycle; the channels are wired in SceneDelegate.
 cp native/SceneDelegate.swift "$RUNNER/SceneDelegate.swift"
+
+echo "==> materializing bundled soundfont (on-device rendering) -> assets/soundfonts/"
+# Flutter can only bundle assets inside the package dir, so copy the canonical
+# soundfont out of the repo assets/. It is git-ignored here (see .gitignore) to
+# avoid duplicating ~5.6 MB into the app package.
+mkdir -p assets/soundfonts
+cp ../assets/soundfonts/harmonium.sf2 assets/soundfonts/harmonium.sf2
 
 PLIST="$RUNNER/Info.plist"
 PB=/usr/libexec/PlistBuddy
