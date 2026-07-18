@@ -20,8 +20,16 @@ import random
 
 # Max absolute micro-timing jitter for a non-structural note, in seconds.
 JITTER_S = 0.012
-# Legato overlap added to every note's sounding duration, in seconds.
+# Legato overlap added to every note's sounding duration, in seconds. This is
+# musical between DIFFERENT pitches (harmonium keys bleed); it must NOT apply
+# across a repeated pitch or the sampler retriggers mid-note and the repeat
+# sounds cut off.
 LEGATO_OVERLAP_S = 0.045
+# Minimum silence before the SAME pitch sounds again, so repeated notes (e.g.
+# Sa Sa Sa) re-articulate cleanly instead of tying into one cut-off blur.
+REARTICULATION_GAP_S = 0.05
+# Floor on any note's sounding duration after clamping.
+MIN_NOTE_S = 0.06
 # Base MIDI velocity before taal shaping.
 BASE_VELOCITY = 82
 # Per-avartan velocity noise amplitude (integer velocity units).

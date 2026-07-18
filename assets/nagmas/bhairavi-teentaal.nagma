@@ -1,9 +1,14 @@
 # Bhairavi lehra, Teentaal (16 matras, 4 vibhags of 4)
-# Bhairavi thaat: all komal — r g d n (plus S m P shuddha).
-# Grammar: newline or '|' separates vibhags; space separates matras;
-#          ',' splits a matra in two; '-' sustains; ' = taar, . = mandra.
-# Resolves on r -> S at sam.
+# Bhairavi thaat: komal re ga dha ni; shuddha Ma, Pa. Sam beat 1, khaali beat 9.
+# Ascends S r g m P .. to taar Sa, then descends back to m -> resolves to S at sam.
+# Grammar: newline or '|' separates vibhags; ' = taar, . = mandra; ',' splits a
+#          matra; '-' sustains.
+#
+#  Sa re ga Ma
 S r g m
-P d P m
-g m P d
+#  Pa Ma ga re
 P m g r
+#  Pa dha ni Sa'   (khaali at Pa / beat 9)
+P d n S'
+#  ni dha Pa Ma
+n d P m

@@ -66,6 +66,31 @@ def test_transposition_changes_pitch_not_timing():
         assert ed.start_s == ec.start_s
 
 
+def test_repeated_pitch_rearticulates_not_tied():
+    # "Sa Sa Sa ..." — three identical notes must not overlap, or the sampler
+    # retriggers mid-note and the repeat sounds cut off.
+    from nagma_core import performance as perf
+    doc = parse_nagma("S S S S | P m g r | P d n S' | n d P m")
+    score = compile_score(doc, bpm=90, sa="C", avartans=1)
+    sa = [e for e in sorted(score.events, key=lambda e: e.start_s)
+          if e.midi == score.sa_midi and e.matra < 4]
+    assert len(sa) == 4
+    for a, b in zip(sa, sa[1:]):
+        gap = b.start_s - (a.start_s + a.dur_s)
+        # a clean gap of at least (nearly) REARTICULATION_GAP_S, never overlap
+        assert gap >= perf.REARTICULATION_GAP_S - 1e-6, f"repeated Sa overlaps: gap={gap}"
+
+
+def test_distinct_pitches_keep_legato_overlap():
+    # Different consecutive pitches SHOULD overlap (harmonium bleed) — the fix
+    # must not strip legato everywhere.
+    doc = parse_nagma("S r g m | P m g r | P d n S' | n d P m")
+    score = compile_score(doc, bpm=90, sa="C", avartans=1)
+    evs = sorted([e for e in score.events if e.avartan == 0], key=lambda e: e.start_s)
+    a, b = evs[0], evs[1]  # S then r — distinct pitches
+    assert a.start_s + a.dur_s > b.start_s, "distinct-pitch legato overlap was lost"
+
+
 def test_wrong_matra_count_rejected():
     doc = parse_nagma(STOCK)
     doc.matras = doc.matras[:15]

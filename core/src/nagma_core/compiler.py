@@ -128,6 +128,20 @@ def compile_score(
 
     events.sort(key=lambda e: e.start_s)
 
+    # Same-pitch re-articulation: legato must not sustain a note into the next
+    # onset of the SAME pitch (that retriggers the sampler mid-note and the
+    # repeat sounds cut off — e.g. "Sa Sa Sa" blurs into one). Clamp each note
+    # to end a small gap before the next same-pitch onset. Different-pitch
+    # overlap (the harmonium bleed) is left untouched.
+    by_pitch: dict[int, list[Event]] = {}
+    for e in events:
+        by_pitch.setdefault(e.midi, []).append(e)
+    for group in by_pitch.values():
+        for a, b in zip(group, group[1:]):  # already start-sorted (events were)
+            latest_end = b.start_s - perf.REARTICULATION_GAP_S
+            if a.start_s + a.dur_s > latest_end:
+                a.dur_s = max(perf.MIN_NOTE_S, latest_end - a.start_s)
+
     return ExpressiveScore(
         sample_rate=sample_rate,
         bpm=bpm,
