@@ -54,9 +54,9 @@ bool isPlucked(String instrument) => pluckedInstruments.contains(instrument);
 /// of resolution (sam/taali); descending motion, leaps and repeats are re-plucked.
 const double meendGlideS = 0.15;       // ~150 ms, kept ~constant across laya
 const int meendMaxSemitones = 2;       // fits the default ±2-st pitch-bend range
-const double meendProb = 0.55;         // chance an eligible step glides
-const double meendProbStructural = 0.9; // higher when landing on sam/taali
-const double meendMinNoteS = 0.14;     // don't glide notes shorter than this
+const double meendProb = 0.72;         // chance an eligible step glides
+const double meendProbStructural = 0.95; // higher when landing on sam/taali
+const double meendMinNoteS = 0.12;     // don't glide notes shorter than this
 
 /// Per-note static micro-detune (fake round-robin). Gaussian, SD in cents; most
 /// notes land within a few cents so it reads as human, not out-of-tune.
