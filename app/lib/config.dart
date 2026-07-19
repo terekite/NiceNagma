@@ -30,9 +30,19 @@ class Config {
   static const String defaultTaal = 'teentaal';
 
   // Selectable instruments. Each must have a bundled/downloadable soundfont
-  // (see SoundfontProvider). Harmonium is the reed default; sitar is plucked.
+  // (see SoundfontProvider). Harmonium is the reed default.
+  //
+  // Sitar is SHELVED (not listed here, so no chip renders) — its sf2/build
+  // script/render code all stay on this branch. Reason: the sitar sf2 resamples
+  // ONE real note (freesound #42192) across the keyboard, which stretches
+  // formants (banjo twang) and makes every note timbrally identical (robotic) —
+  // worse than stock apps. A convincing plucked timbre needs a REAL per-pitch
+  // multisample (as harmonium is built), and a focused hunt found no free,
+  // license-clean, real multi-note sitar source (VCSL/Iowa MIS/Philharmonia have
+  // none; every free candidate is single-sample-resampled, drone-contaminated,
+  // synthesized, or CC-BY-NC). Add 'sitar' back once such a source exists.
   static const String defaultInstrument = 'harmonium';
-  static const List<String> instruments = ['harmonium', 'sitar'];
+  static const List<String> instruments = ['harmonium'];
 
   // Tempo control range. Laya (vilambit/madhya/drut) is auto-selected server-side.
   static const double minBpm = 30;

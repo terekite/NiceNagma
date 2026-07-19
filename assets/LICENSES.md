@@ -31,6 +31,20 @@ semitone, C2–D5, with seamless crossfade loops) from a CC0 studio recording:
 
 ## `soundfonts/sitar.sf2` — source (CC0, no attribution required)
 
+> **⚠️ SHELVED — not shipped in the app.** The sitar is hidden from the UI
+> (`Config.instruments = ['harmonium']`); its sf2, build script, and plucked
+> render code all remain on branch `feature/sitar` for a future attempt. It is
+> shelved because this sf2 **resamples ONE real note across the whole keyboard**,
+> which stretches formants (banjo twang) and makes every note timbrally identical
+> (robotic) — worse than stock apps, below the "real-ish timbre + machine-perfect
+> laya" bar. A convincing plucked voice needs a **REAL per-pitch multisample**
+> (the way `harmonium.sf2` is built from a sliced chromatic run), and a focused
+> source hunt (2026-07) found **no free, license-clean, real multi-note sitar**:
+> VCSL / University of Iowa MIS / Philharmonia have no sitar at all, and every
+> free candidate is single-sample-resampled, drone-contaminated, synthesized, or
+> CC-BY-NC (unshippable). Every real multisample sitar is a paid library. Re-add
+> `'sitar'` to `Config.instruments` once a clean free/CC0 per-pitch source exists.
+
 The sitar is a **plucked one-shot SF2 built in-repo** (`scripts/build_sitar.py`)
 from a single CC0 sitar recording:
 
