@@ -119,8 +119,28 @@ def _name(s: str, n: int = 20) -> bytes:
     return b + b"\x00" * (n - len(b))
 
 
-def build_sf2(samples, sr, path, inst_name="Harmonium", preset=0, bank=0):
-    """samples: list of dict(pcm, root, loop_start, loop_end, name)."""
+def build_sf2(samples, sr, path, inst_name="Harmonium", preset=0, bank=0,
+              samplemode=1, release_s=0.35, sustain_full=False):
+    """Author a minimal SF2 (one preset -> one instrument -> one zone per sample).
+
+    samples: list of dict(pcm, root, loop_start, loop_end, name[, lo, hi]).
+      pcm         int16 mono samples for this zone.
+      root        MIDI key the sample plays at native rate.
+      loop_start/loop_end  loop points in frames (used only when samplemode==1).
+      lo/hi       optional inclusive MIDI key-range for the zone. When absent the
+                  zones tile contiguously by root (harmonium's one-per-semitone
+                  layout: first sample -> lo=0, last -> hi=127, else lo=hi=root).
+                  Pass explicit lo/hi for a sparse multisample (nearest-sample
+                  playback, e.g. plucked instruments spread across the keyboard).
+
+    Additive, backward-compatible knobs (defaults reproduce the harmonium):
+      samplemode    SF2 GEN_SAMPLEMODES: 1 = loop continuously (sustained reed),
+                    0 = play once then stop (plucked one-shot, natural decay).
+      release_s     volume-envelope release in seconds.
+      sustain_full  when True, hold the note at full level (GEN_HOLDVOLENV) with
+                    no envelope decay (GEN_SUSTAINVOLENV=0) so a sampler that
+                    honours the volume envelope won't fade a long-held note.
+    """
     # ---- sdta / smpl : concatenate int16, 46 zero guard samples between ----
     guard = np.zeros(46, dtype="<i2")
     smpl = bytearray()
@@ -144,7 +164,9 @@ def build_sf2(samples, sr, path, inst_name="Harmonium", preset=0, bank=0):
     # ---- igen : one zone per sample ----
     GEN_KEYRANGE, GEN_RELEASE, GEN_FINETUNE = 43, 38, 52
     GEN_SAMPLEMODES, GEN_ROOTKEY, GEN_SAMPLEID = 54, 58, 53
-    release_tc = int(round(1200 * np.log2(0.35)))  # ~0.35s release, timecents
+    GEN_HOLDVOLENV, GEN_SUSTAINVOLENV = 35, 37
+    release_tc = int(round(1200 * np.log2(max(release_s, 1e-3))))  # release, timecents
+    hold_tc = 4300  # ~12s full-level hold before any decay (sustain_full)
 
     def gen(op, amount_bytes):
         return struct.pack("<H", op) + amount_bytes
@@ -152,15 +174,19 @@ def build_sf2(samples, sr, path, inst_name="Harmonium", preset=0, bank=0):
     igen = bytearray()
     ibag = bytearray()
     gen_ndx = 0
+    n_gens = 6 if sustain_full else 4
     for i, s in enumerate(samples):
         ibag += struct.pack("<HH", gen_ndx, 0)
-        lo = 0 if i == 0 else s["root"]
-        hi = 127 if i == len(samples) - 1 else s["root"]
-        igen += gen(GEN_KEYRANGE, struct.pack("<BB", lo, hi))
+        lo = s.get("lo", 0 if i == 0 else s["root"])
+        hi = s.get("hi", 127 if i == len(samples) - 1 else s["root"])
+        igen += gen(GEN_KEYRANGE, struct.pack("<BB", lo, hi))    # MUST be first
+        if sustain_full:
+            igen += gen(GEN_HOLDVOLENV, struct.pack("<h", hold_tc))
+            igen += gen(GEN_SUSTAINVOLENV, struct.pack("<h", 0))  # 0 cB attenuation
         igen += gen(GEN_RELEASE, struct.pack("<h", release_tc))
-        igen += gen(GEN_SAMPLEMODES, struct.pack("<H", 1))       # loop continuously
+        igen += gen(GEN_SAMPLEMODES, struct.pack("<H", samplemode))
         igen += gen(GEN_SAMPLEID, struct.pack("<H", i))          # MUST be last
-        gen_ndx += 4
+        gen_ndx += n_gens
     ibag += struct.pack("<HH", gen_ndx, 0)                       # terminal bag
     igen += gen(0, struct.pack("<H", 0))                         # terminal gen
     imod = struct.pack("<HHhHH", 0, 0, 0, 0, 0)                  # terminal mod
@@ -187,7 +213,7 @@ def build_sf2(samples, sr, path, inst_name="Harmonium", preset=0, bank=0):
     info = _list(b"INFO",
                  _chunk(b"ifil", struct.pack("<HH", 2, 1)) +
                  _chunk(b"isng", _name("EMU8000", 8)) +
-                 _chunk(b"INAM", _name("NiceNagma Harmonium (CC0)", 26)))
+                 _chunk(b"INAM", _name(f"NiceNagma {inst_name} (CC0)", 32)))
     sdta = _list(b"sdta", _chunk(b"smpl", bytes(smpl)))
 
     riff = _chunk(b"RIFF", b"sfbk" + info + sdta + pdta)

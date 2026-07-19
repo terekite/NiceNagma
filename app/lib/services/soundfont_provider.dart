@@ -16,7 +16,13 @@ class SoundfontProvider {
   /// Instrument -> bundled asset. Add on-demand-pack entries here later.
   static const Map<String, String> _bundled = {
     'harmonium': 'assets/soundfonts/harmonium.sf2',
+    // Plucked sitar (~4 MB, jawari buzz + sympathetic-string ring). Selected via
+    // RenderRequest.instrument = 'sitar'; renders through the same seam.
+    'sitar': 'assets/soundfonts/sitar.sf2',
   };
+
+  /// Instrument names that ship in the app binary (have a `_bundled` entry).
+  static Iterable<String> get bundledInstruments => _bundled.keys;
 
   /// Filesystem path to the instrument's .sf2, materializing the bundled asset on
   /// first use. Subsequent calls return the cached copy.

@@ -24,7 +24,9 @@ assets/tanpura/*.flac
 # ...but DO commit the built multisample harmonium SF2 so render/CI/Docker are
 # reproducible without a build step. License: CC0 (assets/LICENSES.md).
 !assets/soundfonts/harmonium.sf2
-# Raw sample source (re-fetched/rebuilt by scripts/build_harmonium.py) — don't commit.
+# ...and the built plucked sitar SF2 (scripts/build_sitar.py). CC0 (LICENSES.md).
+!assets/soundfonts/sitar.sf2
+# Raw sample source (re-fetched/rebuilt by the build scripts) — don't commit.
 assets/soundfonts/raw/
 
 # Flutter / Dart

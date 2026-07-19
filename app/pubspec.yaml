@@ -30,3 +30,6 @@ flutter:
   # instruments are downloaded on demand, not bundled — see SoundfontProvider.
   assets:
     - assets/soundfonts/harmonium.sf2
+    # Plucked sitar (~4 MB): jawari buzz + sympathetic-string ring. Selectable via
+    # RenderRequest.instrument = 'sitar'. Materialized from repo assets/ by bootstrap.sh.
+    - assets/soundfonts/sitar.sf2

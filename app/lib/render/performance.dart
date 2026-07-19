@@ -41,6 +41,33 @@ const double swellFullAtS = 0.8;
 const int _velocityMin = 24;
 const int _velocityMax = 122;
 
+// Plucked lutes (sitar) don't take harmonium-style kan-swar grace notes — you
+// don't flick those on a plucked string — so they render with grace density 0.
+const Set<String> pluckedInstruments = {'sitar'};
+bool isPlucked(String instrument) => pluckedInstruments.contains(instrument);
+
+// --- plucked expression: the "human" layer that a resampled one-shot lacks ----
+// Sources (see PR notes): sitar meend + per-note variation research brief.
+
+/// Meend (pitch glide) parameters. A real sitarist glides *up* into a note from
+/// the previous pitch on small ascending steps, especially approaching a point
+/// of resolution (sam/taali); descending motion, leaps and repeats are re-plucked.
+const double meendGlideS = 0.15;       // ~150 ms, kept ~constant across laya
+const int meendMaxSemitones = 2;       // fits the default ±2-st pitch-bend range
+const double meendProb = 0.72;         // chance an eligible step glides
+const double meendProbStructural = 0.95; // higher when landing on sam/taali
+const double meendMinNoteS = 0.12;     // don't glide notes shorter than this
+
+/// Per-note static micro-detune (fake round-robin). Gaussian, SD in cents; most
+/// notes land within a few cents so it reads as human, not out-of-tune.
+const double microPitchCentsSd = 3.0;
+
+/// Plucked micro-timing: Gaussian onset jitter (SD seconds) on non-structural
+/// notes — a normal spread reads more human than uniform jitter. Sam/matra exact.
+const double pluckedJitterSd = 0.014;
+/// Plucked per-note velocity spread (Gaussian SD, velocity units).
+const double pluckedVelocitySd = 6.0;
+
 // Grace notes (kan swar).
 const double graceDensity = 0.12;
 const Map<String, double> graceDensityByLaya = {
@@ -64,6 +91,11 @@ class Rng {
   int randint(int a, int b) => a + _r.nextInt(b - a + 1);
 
   double random() => _r.nextDouble();
+
+  /// Approx-Gaussian (mean 0) via sum of three uniforms; naturally clamped to
+  /// ±3·sd. Good enough for micro-timing/detune humanization.
+  double gaussian(double sd) =>
+      sd * (uniform(-1, 1) + uniform(-1, 1) + uniform(-1, 1));
 }
 
 int _mask(int v) => v & 0x7FFFFFFF;
@@ -76,9 +108,31 @@ Rng avartanRng(int baseSeed, int avartan) =>
 Rng graceRng(int baseSeed, int avartan) =>
     Rng(_mask((baseSeed * 2246822519) ^ (avartan * 3266489917) ^ 0x85EBCA77));
 
+/// RNG for plucked expression (micro-detune, meend decisions) — a separate
+/// stream so adding it doesn't perturb the existing timing/dynamics feel.
+Rng pluckRng(int baseSeed, int avartan) =>
+    Rng(_mask((baseSeed * 2891336453) ^ (avartan * 2654435761) ^ 0x27D4EB2F));
+
 /// Seconds to add to an onset. Always 0 for structural notes.
 double timingJitter(Rng rng, bool structural) =>
     structural ? 0.0 : rng.uniform(-jitterS, jitterS);
+
+/// Gaussian onset jitter for plucked instruments (0 for structural notes).
+double timingJitterGaussian(Rng rng, bool structural) =>
+    structural ? 0.0 : rng.gaussian(pluckedJitterSd);
+
+/// The pitch to glide (meend) INTO the current note from, or null to re-pluck.
+/// Real rule: glide small ascending steps, especially into resolution notes.
+int? meendFrom(Rng rng, int? prevMidi, int midi, bool targetStructural) {
+  if (prevMidi == null) return null;
+  final step = midi - prevMidi;
+  if (step < 1 || step > meendMaxSemitones) return null; // ascending steps only
+  final p = targetStructural ? meendProbStructural : meendProb;
+  return rng.random() < p ? prevMidi : null;
+}
+
+/// Static per-note micro-detune in cents (fake round-robin).
+double microDetuneCents(Rng rng) => rng.gaussian(microPitchCentsSd);
 
 /// Taal-shaped velocity before per-avartan noise. Swell toward sam across the
 /// cycle, with structural accents/dips layered on.
@@ -108,6 +162,13 @@ int baseVelocity(int matra, String mark, int matraCount) {
 
 int applyVelocityNoise(Rng rng, int velocity) {
   final v = velocity + rng.randint(-velocityNoise, velocityNoise);
+  return math.max(_velocityMin, math.min(_velocityMax, v));
+}
+
+/// Wider Gaussian velocity spread for plucked instruments (~±1-2 dB per note),
+/// so no two plucks hit at the same level.
+int applyVelocityNoisePlucked(Rng rng, int velocity) {
+  final v = velocity + rng.gaussian(pluckedVelocitySd).round();
   return math.max(_velocityMin, math.min(_velocityMax, v));
 }
 
