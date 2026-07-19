@@ -40,23 +40,37 @@ from a single CC0 sitar recording:
 - **License:** **Creative Commons 0 (CC0 1.0) — public domain.** Commercial use
   allowed with **no attribution required and no restrictions.**
 - **Build:** `scripts/build_sitar.py` fetches the CC0 HQ preview from the public
-  freesound CDN, autocorrelation-detects the source pitch (jawari overtones fool
-  an FFT peak), slices the pluck (attack + natural decay), then **resamples that
-  one note to a spread of anchor pitches** (every 2 semitones, ~1 octave either
-  side of the source) tiled by nearest-sample key ranges. `samplemode=0` (plucked
-  one-shot, no loop) so the real attack+decay rings out — like the tanpura, not
-  the looped-sustain harmonium.
-- **Known limitation / upgrade path:** because it is one note resampled across the
-  keyboard, formants stretch with pitch, so anchors far from the source sound
-  progressively less natural. A real multi-note sitar recording (like the
-  harmonium's per-semitone chromatic run) would replace this — same build/seam.
+  freesound CDN, detects the source pitch by **Harmonic Product Spectrum** (robust
+  to the jawari overtones that fool autocorrelation), slices the pluck (attack +
+  natural decay), applies a **warmth EQ** (see below), then **resamples that one
+  note to a spread of anchor pitches** (every 2 semitones, ~1 octave either side of
+  the source) tiled by nearest-sample key ranges. `samplemode=0` (plucked one-shot,
+  no loop) so the real attack+decay rings out — like the tanpura, not the
+  looped-sustain harmonium.
+- **Warmth / de-twang (why it's not just the raw sitar):** the goal tone is warm
+  and round, "closer to a sarod," not the bright mandolin-ish jawari twang. A
+  zero-phase FFT EQ cuts the 2.5–4 kHz jawari twang formant, rolls off the fizzy
+  top, and adds low-mid body, pulling the render spectral centroid from ~2600 Hz
+  (raw) down to ~1950 Hz (about the harmonium's warmth) while keeping tuning exact.
+- **Why not an actual sarod:** real CC0 *isolated* sarod notes don't exist, and
+  the one CC0 sarod recording (freesound #9610, bluedotproductions, CC0) is a riff
+  whose drone/sympathetic strings ring *under* the melody note (two pitches a
+  whole-tone apart), so resampling it across the keyboard mistunes every key. A
+  true sarod voice would need a **licensed clean sarod multisample** (a paid
+  library or a self-recorded set) — same build/seam.
+- **Known limitation / upgrade path:** one note resampled across the keyboard, so
+  formants stretch with pitch; a real per-semitone plucked multisample would
+  improve the extremes.
 
-> **On-device verification still owed:** validated only with the fluidsynth CLI
-> (pitch within ±4c across E2–F#4, clean plucked decay −13…−26 dB, no seam
-> clicks). **AVAudioUnitSampler ignores SF2 loop points and imposes its own
-> envelope decay**, so the on-device timbre/decay must still be listened to and
-> the `OfflineRenderer` mastering may need a sitar preset — pending the user's OK
-> to build/run on the simulator.
+> **On-device verification:** fluidsynth CLI — tuning within ±3c across the anchor
+> range (E2–F#4, HPS-measured), clean plucked decay (−23 dB attack→1.5s), no seam
+> clicks. **AVAudioUnitSampler ignores SF2 loop points and imposes its own
+> envelope decay**, so the on-device timbre is not identical; listened-to on the
+> simulator. Ornaments: plucked instruments render with **no kan-swar grace
+> notes** (see `performance.is_plucked`). Still open: a plucked-instrument
+> `OfflineRenderer` mastering preset (the bellows LFO is a reed gesture), and
+> optional **meend** (pitch-glide between notes) for less-robotic phrasing — both
+> deferred.
 
 ## Checklist before shipping a paid build
 - [x] Soundfont license permits commercial use with no strings (CC0 — harmonium + sitar).
