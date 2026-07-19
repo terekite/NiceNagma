@@ -38,6 +38,10 @@ CHORUS = {
     ],
 }
 
+# Bowed strings want room, not reed-beating: the sarangi preset uses a wetter,
+# slightly longer room and DROPS the harmonium's double-reed chorus + bellows LFO.
+SARANGI_REVERB = {"seconds": 0.7, "wet": 0.16, "seed": 1}
+
 
 def _lazy_imports():
     try:
@@ -61,6 +65,9 @@ def master_loop(in_wav: str, out_wav: str, score: ExpressiveScore) -> int:
             f"Rendered sample rate {sr} != score sample rate {score.sample_rate}."
         )
 
+    # Bowed strings master differently from the reed harmonium (see SARANGI_REVERB).
+    sarangi = getattr(score, "instrument", "") == "sarangi"
+
     n = score.loop_length_samples
     m = audio.shape[0]
 
@@ -78,7 +85,7 @@ def master_loop(in_wav: str, out_wav: str, score: ExpressiveScore) -> int:
             body[:wrap] += tail * fade[:, None]
 
     # --- bellows LFO, snapped to whole cycles for seamlessness --------------
-    depth = float(score.bellows.get("depth", 0.0))
+    depth = 0.0 if sarangi else float(score.bellows.get("depth", 0.0))
     rate = float(score.bellows.get("rate_hz", 0.25))
     if depth > 0:
         cycles = max(1, round(rate * score.loop_length_s))
@@ -89,12 +96,14 @@ def master_loop(in_wav: str, out_wav: str, score: ExpressiveScore) -> int:
         body *= lfo[:, None]
 
     # --- double-reed shimmer (harmonium chorus), before the room ------------
-    if CHORUS["wet"] > 0:
+    # Skip it for the sarangi — a bowed string has no paired reeds to beat.
+    if CHORUS["wet"] > 0 and not sarangi:
         body = _chorus(np, body, sr, CHORUS)
 
     # --- room presence: convolution reverb, circular so the loop stays exact -
-    if REVERB["wet"] > 0:
-        body = _apply_reverb(np, body, sr, REVERB)
+    rev = SARANGI_REVERB if sarangi else REVERB
+    if rev["wet"] > 0:
+        body = _apply_reverb(np, body, sr, rev)
 
     # --- loudness normalize -------------------------------------------------
     body = _normalize(np, body, sr)

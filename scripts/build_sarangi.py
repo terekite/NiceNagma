@@ -1,38 +1,26 @@
 #!/usr/bin/env python3
-"""Build a bowed-string sarangi SF2 from CC0 single-note recordings.
+"""Build a bowed-string sarangi SF2 from REAL CC0 sarangi recordings — the
+HARMONIUM approach: a discrete multisample of real recorded sustain, played
+per-note (no synthesis, no meend), pitch-matched by the sampler.
 
-A sarangi is a bowed, fretless Indian string instrument — a continuous, singing,
-sustained tone (not plucked like the tanpura, not a reed like the harmonium). So,
-like the harmonium, its SF2 wants a LOOPED sustain (samplemode=1): a short attack
-plus a seamless crossfade loop in the steady bow, which the sampler holds for the
-note's duration.
+Source: two CC0 studio recordings of a LIVE sarangi player by freesound user
+sarman1234 (Rode mic, treated room):
+  816125  https://freesound.org/people/sarman1234/sounds/816125/   (CC0)
+  816126  https://freesound.org/people/sarman1234/sounds/816126/   (CC0)
 
-Source: two CC0 (public-domain) single sustained sarangi notes by a since-deleted
-freesound user (uploader id 1). Each is a clean ~4.3s held tone — a real ~200ms
-attack from footage, then a software-built steady sustain with filtered-noise
-string resonance (a hybrid design sample, not a pure field recording, but a clean
-single note and, crucially, CC0):
+These are raga phrases; the only LONG, clean, pitch-stable sustained tone the
+player holds is D5 (~588 Hz, up to ~3 s). We take those D5 runs as the real
+timbral source and resample each to every target semitone (tune pre-compensated
+to exact 12-TET). Because the source is long, every note is filled with a smooth,
+CONTINUOUS real bow — no short-loop re-articulation (the earlier build's "bowed
+twice" pulse) and no crossfade-tiling artifacts. The player's own subtle andolan
+rides along (authentic), and we assign different D5 runs across the keyboard so
+notes don't all wobble identically. A soft bow onset + gentle release are shaped
+on top; a long tail loop covers the rare note held past the baked length.
 
-  167023  "Sarangi.wav"      -> C4  (measured f0 262.5 Hz, midi 60)
-  167088  "Sarangi -G3.wav"  -> G#4 (measured f0 412.2 Hz, midi 68; the "G3" in
-                                the filename is mislabeled — the partials
-                                412/824/1236/1648 Hz fix the fundamental at 412)
-
-Two source pitches can't span the app's C2..D5 keyboard without heavy pitch-shift,
-and the repo's committed `build_sf2` gives each middle zone a one-key range (no
-key-range tiling), so — exactly like the harmonium — we author ONE looped zone per
-semitone (C2..D5, midi 36..74). For each target semitone we resample the NEAREST
-source note to that pitch (down-shift for the low reaches, mild up-shift with a
-short anti-alias pre-filter for the few notes above the top source),
-pre-compensating `build_harmonium.GLOBAL_TUNE_CENTS` so the sounding pitch is exact
-12-TET. A level-flattened crossfade loop (`make_looped_sarangi`) turns the source's
-noisy sustain into a steady, seamless bow, and `build_sf2` (reused untouched)
-authors the looping SF2.
-
-Timbre caveat: the sources are synthesized-hybrid, and the low octaves are C4 shifted
-down up to two octaves, so formants drift dark. It reads as a bowed sustain in
-fluidsynth; the on-device "does it sing like a sarangi" listen is a documented TODO
-(and note AVAudioUnitSampler ignores SF2 loop points — see the handoff).
+Honest limitation: with only D5 as clean material, low notes are down-shifted up
+to ~3 octaves, so their formants drift dark. This is the thin-free-source reality
+(no CC0 sarangi multisample exists) and part of the go/no-go evaluation.
 
 Usage:  .venv/bin/python scripts/build_sarangi.py
 """
@@ -48,45 +36,42 @@ import numpy as np
 import soundfile as sf
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-# Reuse the SF2 writer + tuning/loudness constants verbatim (no edits to the shared
-# script — keeps the merge surface with the harmonium/tanpura work empty). The loop
-# slicer is sarangi-specific (level-flattened, below) to tame the noisy sustain.
+# Reuse the SF2 writer + tuning/loudness constants verbatim (build_sf2 untouched —
+# keeps the merge surface with the harmonium/tanpura work empty).
 from build_harmonium import build_sf2, GLOBAL_TUNE_CENTS, TARGET_RMS, XFADE  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RAW_DIR = os.path.join(ROOT, "assets", "soundfonts", "raw")
 OUT_SF2 = os.path.join(ROOT, "assets", "soundfonts", "sarangi.sf2")
-
 NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 
-# CC0 source previews (HQ mp3 on the public freesound CDN; deleted uploader id 1).
-SOURCES = [
-    {"id": 167023, "expect_midi": 60},  # C4
-    {"id": 167088, "expect_midi": 68},  # G#4 (filename "G3" is wrong)
+CDN = "https://cdn.freesound.org/previews/816/{id}_17630533-hq.mp3"
+# Long, clean, pitch-stable D5 sustain runs (id, t0, t1) found by a steadiness scan.
+D5_RUNS = [
+    ("816125", 5.30, 8.34),   # 3.0 s
+    ("816126", 3.94, 5.80),   # 1.9 s
+    ("816126", 11.05, 12.58),  # 1.5 s
 ]
-CDN = "https://cdn.freesound.org/previews/167/{id}_1-hq.mp3"
+SRC_F0 = 588.0  # measured D5
 
-# The authored keyboard: match the harmonium's C2..D5 so any lehra note resolves.
-LO_MIDI = 36   # C2
-HI_MIDI = 74   # D5
-
-LOOP_START_S = 1.2   # carve the loop from steady sustain, past the attack
-LOOP_LEN_S = 0.6     # longer window -> slower repeat than the harmonium's 0.5s
+LO_MIDI, HI_MIDI = 36, 74     # C2..D5 (match the harmonium keyboard)
+SUSTAIN_S = 2.5               # baked note length (notes rarely exceed this)
+ATTACK_S = 0.075             # soft bow onset
+RELEASE_S = 0.30             # gentle tail release
+DECAY_DB = -2.0              # very slight natural decay across the note
 
 
 def midi_to_freq(m: float) -> float:
     return 440.0 * 2 ** ((m - 69) / 12.0)
 
 
-def fetch_decode(sid: int) -> tuple[np.ndarray, int]:
-    """Fetch the CC0 preview mp3 (cached) and decode to 44.1k mono float."""
+def fetch_decode(sid: str) -> tuple[np.ndarray, int]:
     os.makedirs(RAW_DIR, exist_ok=True)
-    mp3 = os.path.join(RAW_DIR, f"sarangi_{sid}.mp3")
-    wav = os.path.join(RAW_DIR, f"sarangi_{sid}.wav")
+    mp3 = os.path.join(RAW_DIR, f"sarangi_real_{sid}.mp3")
+    wav = os.path.join(RAW_DIR, f"sarangi_real_{sid}.wav")
     if not os.path.exists(mp3):
-        url = CDN.format(id=sid)
-        print(f"fetching CC0 sarangi note {sid}: {url}")
-        urllib.request.urlretrieve(url, mp3)
+        print(f"fetching CC0 sarangi take {sid}: {CDN.format(id=sid)}")
+        urllib.request.urlretrieve(CDN.format(id=sid), mp3)
     if not os.path.exists(wav):
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", mp3,
                         "-ar", "44100", "-ac", "1", wav], check=True)
@@ -96,25 +81,8 @@ def fetch_decode(sid: int) -> tuple[np.ndarray, int]:
     return x.astype(np.float64), sr
 
 
-def measure_f0(x: np.ndarray, sr: int) -> float:
-    """Autocorrelation fundamental over the steady sustain (robust to strong
-    upper partials — an FFT peak can land on a harmonic, not the true pitch)."""
-    seg = x[int(0.8 * sr):int(2.8 * sr)].copy()
-    seg -= seg.mean()
-    corr = np.correlate(seg, seg, "full")[len(seg) - 1:]
-    tmin, tmax = int(sr / 500), int(sr / 60)  # 60..500 Hz search
-    lag = tmin + int(np.argmax(corr[tmin:tmax]))
-    return sr / lag
-
-
 def resample_to_freq(x: np.ndarray, f0_src: float, f0_tgt: float) -> np.ndarray:
-    """Resample x (played back at the same sr) so its fundamental becomes f0_tgt.
-
-    new_len = len * f0_src / f0_tgt: fewer output samples raises pitch, more lowers
-    it. Down-shift only lengthens (no aliasing), but the handful of notes above the
-    top source up-shift (decimate) — pre-smooth those with a short moving average
-    so the fold-down of high partials stays inaudible."""
-    if f0_tgt > f0_src:  # up-shift -> anti-alias pre-filter
+    if f0_tgt > f0_src:                              # up-shift: anti-alias pre-filter
         k = max(1, int(round(f0_tgt / f0_src)))
         if k > 1:
             x = np.convolve(x, np.ones(k) / k, "same")
@@ -123,84 +91,65 @@ def resample_to_freq(x: np.ndarray, f0_src: float, f0_tgt: float) -> np.ndarray:
     return np.interp(idx, np.arange(len(x)), x)
 
 
-def make_looped_sarangi(seg: np.ndarray, sr: int, midi: int):
-    """Carve a steady, seamless sustain loop for a bowed tone (samplemode=1).
+def make_baked_note(run: np.ndarray, sr: int, midi: int):
+    """Resample a real D5 sustain run to `midi` and shape it into a smooth baked
+    note: level-flatten the source's own dynamics, apply a soft bow onset + slight
+    decay + gentle release. Returns (int16 pcm, loop_start, loop_end). The loop
+    covers a whole-period tail region for any note held past SUSTAIN_S."""
+    precomp = 2 ** (-GLOBAL_TUNE_CENTS / 1200.0)      # cancel build_sf2's shdr tune
+    seg = resample_to_freq(run, SRC_F0, midi_to_freq(midi) * precomp)
+    target = int(SUSTAIN_S * sr)
+    if len(seg) < target:                             # (shouldn't happen: D5 downshifts grow)
+        seg = np.pad(seg, (0, target - len(seg)), mode="reflect")
+    seg = seg[:target].copy()
 
-    Like build_harmonium.make_looped_sample, but first LEVEL-FLATTENS the loop
-    window: the sources bake in a filtered-noise string resonance whose slow
-    amplitude wander, looped as-is, pulses audibly once per loop. Dividing the
-    window (plus its crossfade pre-roll) by its own smoothed envelope holds the bow
-    at a constant level, so the repeat is inaudible. Returns (int16 pcm, loop_start,
-    loop_end); we keep attack..loop_end and let the sampler loop [start,end]."""
-    seg = seg.astype(np.float64).copy()
-    fade_in = int(0.006 * sr)
-    seg[:fade_in] *= np.linspace(0, 1, fade_in)
+    # flatten the source's own slow amplitude drift so our envelope is what shapes it
+    w = int(0.04 * sr)
+    env = np.convolve(np.abs(seg), np.ones(w) / w, "same")
+    seg *= np.median(env) / np.maximum(env, 1e-6)
 
+    # soft bow onset, slight natural decay, gentle release
+    a = int(ATTACK_S * sr)
+    seg[:a] *= np.linspace(0, 1, a) ** 2
+    seg *= np.linspace(1.0, 10 ** (DECAY_DB / 20), len(seg))
+    r = int(RELEASE_S * sr)
+    seg[-r:] *= np.linspace(1, 0, r)
+
+    # loop a whole-period region in the steady tail (before the release)
     period = sr / midi_to_freq(midi)
-    s = int(LOOP_START_S * sr)
-    loop_len = int(round(LOOP_LEN_S * sr / period) * period)  # whole periods
-    e = s + loop_len
-    if e + XFADE >= len(seg):                 # short (mild down-shift) -> shrink loop
-        e = len(seg) - XFADE - 1
-        s = max(int(0.6 * sr), e - loop_len)
+    le = len(seg) - r - int(0.02 * sr)
+    ls = le - int(round(0.4 * sr / period) * period)
+    ls = max(a + int(0.02 * sr), ls)
 
-    # flatten amplitude across the pre-roll..loop-end span to a constant level
-    a = s - XFADE
-    sm = np.convolve(np.abs(seg), np.ones(int(0.05 * sr)) / int(0.05 * sr), "same")
-    sm = np.maximum(sm, 1e-6)
-    seg[a:e] *= sm[a] / sm[a:e]
-
-    # equal-power crossfade so the e -> s wrap is seamless
-    fi = np.sqrt(np.linspace(0, 1, XFADE))
-    fo = np.sqrt(np.linspace(1, 0, XFADE))
-    seg[e - XFADE:e] = seg[e - XFADE:e] * fo + seg[s - XFADE:s] * fi
-
-    seg = seg[:e + 1]
     rms = np.sqrt(np.mean(seg ** 2)) or 1.0
     seg *= TARGET_RMS / rms
     peak = np.max(np.abs(seg))
     if peak > 0.98:
         seg *= 0.98 / peak
     pcm = np.clip(seg * 32767.0, -32768, 32767).astype("<i2")
-    return pcm, s, e
+    return pcm, ls, le
 
 
 def main() -> int:
-    srcs = []
-    for s in SOURCES:
-        x, sr = fetch_decode(s["id"])
-        f0 = measure_f0(x, sr)
-        midi = round(69 + 12 * np.log2(f0 / 440))
-        note = f"{NAMES[midi % 12]}{midi // 12 - 1}"
-        if midi != s["expect_midi"]:
-            print(f"  WARNING: {s['id']} measured {note} (midi {midi}), "
-                  f"expected midi {s['expect_midi']}", file=sys.stderr)
-        srcs.append({"id": s["id"], "x": x, "sr": sr, "f0": f0, "midi": midi})
-        print(f"  {s['id']}: {note} (midi {midi}), f0={f0:.1f}Hz, {len(x)/sr:.2f}s")
-
-    sr = srcs[0]["sr"]
-    # Pre-compensate the global pitch correction baked into build_sf2's shdr so
-    # the SOUNDING pitch lands on exact 12-TET (shdr applies GLOBAL_TUNE_CENTS to
-    # every zone; resample each note that many cents sharp to cancel it).
-    precomp = 2 ** (-GLOBAL_TUNE_CENTS / 1200.0)
+    runs = []
+    for sid, t0, t1 in D5_RUNS:
+        x, sr = fetch_decode(sid)
+        runs.append(x[int(t0 * sr):int(t1 * sr)])
+    sr = 44100
+    print(f"loaded {len(runs)} real D5 sustain runs "
+          f"({', '.join(f'{len(r)/sr:.1f}s' for r in runs)})")
 
     samples = []
-    for midi in range(LO_MIDI, HI_MIDI + 1):
-        f_tgt = midi_to_freq(midi) * precomp
-        # nearest source by pitch = smallest shift = least formant drift
-        src = min(srcs, key=lambda s: abs(np.log2(s["f0"] / f_tgt)))
-        res = resample_to_freq(src["x"], src["f0"], f_tgt)
-        pcm, ls, le = make_looped_sarangi(res, sr, midi)
-        samples.append({"pcm": pcm, "root": midi, "loop_start": ls,
-                        "loop_end": le,
+    for i, midi in enumerate(range(LO_MIDI, HI_MIDI + 1)):
+        run = runs[i % len(runs)]                     # vary source so notes differ
+        pcm, ls, le = make_baked_note(run, sr, midi)
+        samples.append({"pcm": pcm, "root": midi, "loop_start": ls, "loop_end": le,
                         "name": f"Srng_{NAMES[midi % 12]}{midi // 12 - 1}"})
 
-    # samplemode=1 (build_sf2's default): loop the sustain continuously, held for
-    # the note's duration — the right envelope for a bowed, singing tone.
     build_sf2(samples, sr, OUT_SF2, inst_name="Sarangi")
     kb = os.path.getsize(OUT_SF2) // 1024
-    print(f"wrote {OUT_SF2}  ({kb} KB, {len(samples)} looped zones, "
-          f"C2..D5, tune {GLOBAL_TUNE_CENTS}c)")
+    print(f"wrote {OUT_SF2}  ({kb} KB, {len(samples)} baked-sustain zones, C2..D5, "
+          f"real CC0 D5 source, tune {GLOBAL_TUNE_CENTS}c)")
     return 0
 
 
