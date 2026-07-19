@@ -45,6 +45,17 @@ class Event {
   final int avartan;
   final bool structural;
   final double swell; // intra-note bellows swell depth (0..1)
+
+  // --- plucked-instrument expression (sitar); 0/none for reed instruments ---
+  /// Static per-note detune in cents (fake round-robin — breaks the machine-gun
+  /// tell that every resampled pluck is bit-identical).
+  final double microCents;
+
+  /// Meend: if set, the pitch glides from this MIDI note up/down into `midi`
+  /// over `glideS` seconds from the (exact) onset. null => no glide (re-pluck).
+  final int? glideFromMidi;
+  final double glideS;
+
   Event({
     required this.startS,
     required this.durS,
@@ -54,6 +65,9 @@ class Event {
     required this.avartan,
     required this.structural,
     this.swell = 0.0,
+    this.microCents = 0.0,
+    this.glideFromMidi,
+    this.glideS = 0.0,
   });
 }
 

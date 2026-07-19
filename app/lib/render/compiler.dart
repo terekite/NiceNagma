@@ -119,17 +119,37 @@ ExpressiveScore compileScore(
   // --- expand across avartans with per-cycle variation (invariant #2) ---
   final pitchSet = (base.map((e) => e.midi).toSet().toList())..sort();
 
+  final plucked = perf.isPlucked(instrument);
   final events = <Event>[];
   for (var a = 0; a < avartans; a++) {
     final rng = perf.avartanRng(seed, a);
     final grng = perf.graceRng(seed, a); // separate stream
+    final prng = perf.pluckRng(seed, a); // plucked expression stream
     final cycleOffset = a * avartanDurS;
+    int? prevMidi; // previous struck pitch this avartan, for meend
     for (final ev in base) {
-      final jitter = perf.timingJitter(rng, ev.structural);
+      final jitter = plucked
+          ? perf.timingJitterGaussian(rng, ev.structural)
+          : perf.timingJitter(rng, ev.structural);
       final start = cycleOffset + ev.startS + jitter;
       var vel = perf.baseVelocity(ev.matra, ev.mark, matraCount);
-      vel = perf.applyVelocityNoise(rng, vel);
-      final swell = perf.swellDepth(rng, ev.durS, ev.structural);
+      vel = plucked
+          ? perf.applyVelocityNoisePlucked(rng, vel)
+          : perf.applyVelocityNoise(rng, vel);
+      // A pluck attacks then decays — no reed-style swell. Instead give it
+      // per-note micro-detune (round-robin) and meend glides into the note.
+      final swell = plucked ? 0.0 : perf.swellDepth(rng, ev.durS, ev.structural);
+      double microCents = 0.0;
+      int? glideFrom;
+      double glideS = 0.0;
+      if (plucked) {
+        microCents = perf.microDetuneCents(prng);
+        if (ev.durS >= perf.meendMinNoteS) {
+          glideFrom = perf.meendFrom(prng, prevMidi, ev.midi, ev.structural);
+          if (glideFrom != null) glideS = math.min(perf.meendGlideS, 0.6 * ev.durS);
+        }
+      }
+      prevMidi = ev.midi;
       events.add(Event(
         startS: start,
         durS: ev.durS,
@@ -139,6 +159,9 @@ ExpressiveScore compileScore(
         avartan: a,
         structural: ev.structural,
         swell: swell,
+        microCents: microCents,
+        glideFromMidi: glideFrom,
+        glideS: glideS,
       ));
       // Kan swar: sparingly flick a neighbour swar in just before this note.
       // It steals time from BEFORE the exact onset, so the grid is untouched.

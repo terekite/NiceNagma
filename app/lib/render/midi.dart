@@ -34,8 +34,46 @@ const double _swellAttackFrac = 0.5;
 const double _swellAttackMaxS = 0.6;
 const int _swellSteps = 8;
 
+// Pitch bend (meend glides + per-note micro-detune). We set each channel's
+// bend range to ±2 semitones via RPN 0 (also the near-universal default), so a
+// semitone is _pbUnitsPerSemitone units around centre 8192.
+const int _pbCenter = 8192;
+const int _pbUnitsPerSemitone = 4096; // ±2 semitones over the 14-bit range
+
 int _secToTicks(double seconds) =>
     (seconds / _secPerBeat * _ticksPerBeat).round();
+
+int _max(int a, int b) => a > b ? a : b;
+
+int _bendUnits(double semitones) {
+  final u = _pbCenter + (semitones * _pbUnitsPerSemitone).round();
+  return u < 0 ? 0 : (u > 16383 ? 16383 : u);
+}
+
+double _smoothstep(double x) => x * x * (3.0 - 2.0 * x);
+
+/// (tick, 14-bit bend value) pairs for a note: a meend glide from `startSemis`
+/// (relative to the note's pitch, e.g. -2 = start a tone below) easing to the
+/// settled `microSemis` detune over `glideS`; or a single static detune set.
+List<List<int>> _bendPoints(int on, double glideS, double startSemis,
+    double microSemis) {
+  if (startSemis == 0.0 || glideS <= 0) {
+    return [
+      [on, _bendUnits(microSemis)]
+    ];
+  }
+  final glideTicks = _max(1, _secToTicks(glideS));
+  final step = _max(1, _secToTicks(0.01)); // ~10 ms updates -> smooth glide
+  final pairs = <List<int>>[
+    [on, _bendUnits(startSemis + microSemis)] // fully bent at the (exact) onset
+  ];
+  for (var t = step; t < glideTicks; t += step) {
+    final eased = _smoothstep(t / glideTicks); // near-linear w/ eased endpoints
+    pairs.add([on + t, _bendUnits(startSemis * (1.0 - eased) + microSemis)]);
+  }
+  pairs.add([on + glideTicks, _bendUnits(microSemis)]); // settled at pitch
+  return pairs;
+}
 
 /// Greedy interval colouring: lowest channel free at startS; else the one that
 /// frees earliest. Updates freeAt for the chosen channel.
@@ -89,6 +127,7 @@ Uint8List scoreToMidi(ExpressiveScore score, {int program = defaultProgram}) {
   final events = <_Ev>[];
   final freeAt = {for (final c in _channels) c: -1e9};
   final used = <int>{};
+  final bent = <int>{}; // channels that carry a pitch bend (need RPN range set)
 
   final sorted = List<Event>.from(score.events)
     ..sort((x, y) => x.startS.compareTo(y.startS));
@@ -102,12 +141,32 @@ Uint8List scoreToMidi(ExpressiveScore score, {int program = defaultProgram}) {
     for (final tv in _swellCc(on, off, e.swell)) {
       events.add(_Ev(tv[0], 1, 'cc', ch, 11, tv[1]));
     }
+    // Meend glide + micro-detune (plucked). Emit bend BEFORE the note-on (order
+    // 1 < 2) so the note starts already bent to the glide's start pitch.
+    if (e.microCents != 0.0 || e.glideFromMidi != null) {
+      bent.add(ch);
+      final startSemis =
+          e.glideFromMidi != null ? (e.glideFromMidi! - e.midi).toDouble() : 0.0;
+      for (final tv in _bendPoints(on, e.glideS, startSemis, e.microCents / 100.0)) {
+        events.add(_Ev(tv[0], 1, 'pb', ch, tv[1] & 0x7F, (tv[1] >> 7) & 0x7F));
+      }
+    }
     events.add(_Ev(on, 2, 'on', ch, e.midi, e.velocity));
     events.add(_Ev(off, 0, 'off', ch, e.midi, 0));
   }
 
   for (final ch in used.toList()..sort()) {
     events.add(_Ev(0, 0, 'prog', ch, program, 0));
+  }
+  // Pin bend range to ±2 semitones on any channel that bends (RPN 0), before the
+  // first note. order 0 (with program) so it precedes every pitch bend (order 1),
+  // including a glide into sam at tick 0.
+  for (final ch in bent.toList()..sort()) {
+    for (final cv in const [
+      [101, 0], [100, 0], [6, 2], [38, 0] // RPN 0 -> data entry = 2 semitones
+    ]) {
+      events.add(_Ev(0, 0, 'cc', ch, cv[0], cv[1]));
+    }
   }
 
   events.sort((x, y) {
@@ -133,6 +192,10 @@ Uint8List scoreToMidi(ExpressiveScore score, {int program = defaultProgram}) {
         break;
       case 'cc':
         track.addAll([0xB0 | ev.channel, ev.a & 0x7F, ev.b & 0x7F]);
+        break;
+      case 'pb':
+        // pitch bend: status 0xE0|ch, LSB (7-bit), MSB (7-bit)
+        track.addAll([0xE0 | ev.channel, ev.a & 0x7F, ev.b & 0x7F]);
         break;
       case 'on':
         track.addAll([0x90 | ev.channel, ev.a & 0x7F, ev.b & 0x7F]);
