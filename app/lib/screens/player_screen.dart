@@ -97,29 +97,54 @@ double? parseTempoInput(String raw) {
 /// through controller.setBpm — the same path the slider uses — so the chip,
 /// slider, laya label, and re-render all stay in sync. Invalid input is ignored.
 Future<void> _showTempoDialog(
-    BuildContext context, PlayerController controller) async {
-  final textController =
-      TextEditingController(text: controller.bpm.round().toString());
-  void commit() {
-    final v = parseTempoInput(textController.text);
-    if (v != null) controller.setBpm(v);
+        BuildContext context, PlayerController controller) =>
+    showDialog<void>(
+      context: context,
+      builder: (_) => _TempoDialog(controller: controller),
+    );
+
+/// The tempo dialog is a StatefulWidget so its TextEditingController is disposed
+/// in State.dispose() — i.e. after the route (and its dismiss transition) is
+/// fully gone. Disposing it synchronously after `await showDialog` instead races
+/// the dialog's exit animation, which rebuilds the TextField one more frame and
+/// crashes with "A TextEditingController was used after being disposed."
+class _TempoDialog extends StatefulWidget {
+  final PlayerController controller;
+  const _TempoDialog({required this.controller});
+
+  @override
+  State<_TempoDialog> createState() => _TempoDialogState();
+}
+
+class _TempoDialogState extends State<_TempoDialog> {
+  late final TextEditingController _text =
+      TextEditingController(text: widget.controller.bpm.round().toString());
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  void _commit() {
+    final v = parseTempoInput(_text.text);
+    if (v != null) widget.controller.setBpm(v);
     Navigator.of(context).pop();
   }
 
-  await showDialog<void>(
-    context: context,
-    builder: (context) => AlertDialog(
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
       title: const Text('Set tempo'),
       content: TextField(
-        controller: textController,
+        controller: _text,
         autofocus: true,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         textInputAction: TextInputAction.done,
-        onSubmitted: (_) => commit(),
+        onSubmitted: (_) => _commit(),
         decoration: InputDecoration(
           suffixText: 'BPM',
-          helperText:
-              '${Config.minBpm.round()}–${Config.maxBpm.round()} BPM',
+          helperText: '${Config.minBpm.round()}–${Config.maxBpm.round()} BPM',
         ),
       ),
       actions: [
@@ -127,11 +152,10 @@ Future<void> _showTempoDialog(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
-        FilledButton(onPressed: commit, child: const Text('Set')),
+        FilledButton(onPressed: _commit, child: const Text('Set')),
       ],
-    ),
-  );
-  textController.dispose();
+    );
+  }
 }
 
 class _LayaReadout extends StatelessWidget {
