@@ -84,6 +84,56 @@ class PlayerScreen extends StatelessWidget {
   }
 }
 
+/// Parse free-text tempo entry into a positive BPM, or null if unusable.
+/// Range-clamping is intentionally left to controller.setBpm (which clamps to
+/// Config.minBpm/maxBpm), so this only rejects non-numeric / non-positive input.
+double? parseTempoInput(String raw) {
+  final v = double.tryParse(raw.trim());
+  if (v == null || v.isNaN || v.isInfinite || v <= 0) return null;
+  return v;
+}
+
+/// Prompt for an exact tempo. On Set (or keyboard submit) the parsed value goes
+/// through controller.setBpm — the same path the slider uses — so the chip,
+/// slider, laya label, and re-render all stay in sync. Invalid input is ignored.
+Future<void> _showTempoDialog(
+    BuildContext context, PlayerController controller) async {
+  final textController =
+      TextEditingController(text: controller.bpm.round().toString());
+  void commit() {
+    final v = parseTempoInput(textController.text);
+    if (v != null) controller.setBpm(v);
+    Navigator.of(context).pop();
+  }
+
+  await showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Set tempo'),
+      content: TextField(
+        controller: textController,
+        autofocus: true,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => commit(),
+        decoration: InputDecoration(
+          suffixText: 'BPM',
+          helperText:
+              '${Config.minBpm.round()}–${Config.maxBpm.round()} BPM',
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(onPressed: commit, child: const Text('Set')),
+      ],
+    ),
+  );
+  textController.dispose();
+}
+
 class _LayaReadout extends StatelessWidget {
   final PlayerController controller;
   const _LayaReadout({required this.controller});
@@ -96,9 +146,15 @@ class _LayaReadout extends StatelessWidget {
       children: [
         _Chip(label: controller.layaLabel, color: scheme.primaryContainer),
         const SizedBox(width: 8),
-        _Chip(
-            label: '${controller.bpm.round()} BPM',
-            color: scheme.secondaryContainer),
+        // The BPM chip is tappable: tap to type an exact tempo. Both this and the
+        // slider drive controller.setBpm, so they stay in sync automatically.
+        InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => _showTempoDialog(context, controller),
+          child: _Chip(
+              label: '${controller.bpm.round()} BPM',
+              color: scheme.secondaryContainer),
+        ),
         const SizedBox(width: 8),
         _Chip(label: 'Sa ${controller.sa}', color: scheme.tertiaryContainer),
         const SizedBox(width: 8),
