@@ -6,7 +6,7 @@
 import 'package:flutter/material.dart';
 
 import 'state/player_controller.dart';
-import 'screens/player_screen.dart';
+import 'screens/player_shell.dart';
 
 void main() => runApp(const NiceNagmaApp());
 
@@ -49,7 +49,7 @@ class _NiceNagmaAppState extends State<NiceNagmaApp> {
         brightness: Brightness.dark,
         useMaterial3: true,
       ),
-      home: PlayerScreen(controller: _controller),
+      home: PlayerShell(controller: _controller),
     );
   }
 }

@@ -9,20 +9,56 @@ import '../state/player_controller.dart';
 
 class NagmaEditorScreen extends StatefulWidget {
   final PlayerController controller;
-  const NagmaEditorScreen({super.key, required this.controller});
+
+  /// When embedded in the swipeable [PlayerShell], this returns to the player
+  /// page (used by the back arrow and after a successful Apply). When null (the
+  /// screen is a standalone pushed route) we pop the Navigator instead.
+  final VoidCallback? onClose;
+
+  /// Reports the text field's focus state so the shell can lock page-swiping
+  /// while the keyboard is up (avoids the swipe gesture fighting cursor drags).
+  final ValueChanged<bool>? onFocusChanged;
+
+  const NagmaEditorScreen({
+    super.key,
+    required this.controller,
+    this.onClose,
+    this.onFocusChanged,
+  });
 
   @override
   State<NagmaEditorScreen> createState() => _NagmaEditorScreenState();
 }
 
-class _NagmaEditorScreenState extends State<NagmaEditorScreen> {
+// Keep the page alive inside the PageView so an in-progress (unapplied) draft
+// survives swiping to the player and back — only Apply commits it.
+class _NagmaEditorScreenState extends State<NagmaEditorScreen>
+    with AutomaticKeepAliveClientMixin {
   late final TextEditingController _text =
       TextEditingController(text: widget.controller.nagmaText);
+  late final FocusNode _focus = FocusNode()..addListener(_onFocusChange);
   bool _applying = false;
   String? _error;
 
   @override
+  bool get wantKeepAlive => true;
+
+  void _onFocusChange() => widget.onFocusChanged?.call(_focus.hasFocus);
+
+  /// Return to the player: hand back to the shell when embedded, else pop.
+  void _close() {
+    FocusScope.of(context).unfocus();
+    if (widget.onClose != null) {
+      widget.onClose!();
+    } else {
+      Navigator.of(context).pop();
+    }
+  }
+
+  @override
   void dispose() {
+    _focus.removeListener(_onFocusChange);
+    _focus.dispose();
     _text.dispose();
     super.dispose();
   }
@@ -38,14 +74,24 @@ class _NagmaEditorScreenState extends State<NagmaEditorScreen> {
       _applying = false;
       _error = ok ? null : widget.controller.nagmaError;
     });
-    if (ok) Navigator.of(context).pop();
+    if (ok) _close();
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // AutomaticKeepAliveClientMixin
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
+        // When embedded in the shell there is no route to pop, so provide an
+        // explicit back arrow; as a pushed route, let the default one show.
+        leading: widget.onClose != null
+            ? IconButton(
+                tooltip: 'Back to player',
+                icon: const Icon(Icons.arrow_back),
+                onPressed: _close,
+              )
+            : null,
         title: const Text('Edit lehra'),
         actions: [
           TextButton(
@@ -70,6 +116,7 @@ class _NagmaEditorScreenState extends State<NagmaEditorScreen> {
             const SizedBox(height: 12),
             TextField(
               controller: _text,
+              focusNode: _focus,
               maxLines: 8,
               style: const TextStyle(fontFamily: 'monospace', fontSize: 16),
               decoration: InputDecoration(
