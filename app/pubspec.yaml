@@ -30,3 +30,5 @@ flutter:
   # instruments are downloaded on demand, not bundled — see SoundfontProvider.
   assets:
     - assets/soundfonts/harmonium.sf2
+    # Plucked tanpura (~1.8 MB, 3 zones). Sequenced + rendered per Sa on device.
+    - assets/soundfonts/tanpura.sf2

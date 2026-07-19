@@ -44,6 +44,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Bundled soundfont(s) materialized from the canonical repo assets/ by
-# bootstrap.sh — not duplicated into git here.
+# Bundled soundfonts (harmonium + tanpura) materialized from the canonical repo
+# assets/ by bootstrap.sh — not duplicated into git here.
 /assets/soundfonts/

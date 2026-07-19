@@ -7,7 +7,7 @@ its license recorded here before it lands. This is a Day-1 risk-control item
 | File | Type | Source | License | Commercial OK? | Notes |
 |------|------|--------|---------|----------------|-------|
 | `soundfonts/harmonium.sf2` | Soundfont (built) | freesound #330410 | **CC0 / public domain** | ✅ yes, no strings | Built by `scripts/build_harmonium.py`. See below. |
-| `tanpura/harmonium_drone_*.wav` | Drone | freesound #330410 | **CC0 / public domain** | ✅ yes, no strings | The 3 drones from the same CC0 recording (not wired in yet). |
+| `soundfonts/tanpura.sf2` | Soundfont (built) | freesound #416597, #416598, #416605 | **CC0 / public domain** | ✅ yes, no strings | 3-zone plucked tanpura (kharaj C#2 / Pa G#2 / Sa C#3) from `scripts/build_tanpura.py`. Committed. See below. |
 | `nagmas/*.nagma` | Text | Original (this repo) | Repo license | Yes | Stock/proposed lehras. |
 
 ## `soundfonts/harmonium.sf2` — source (CC0, no attribution required)
@@ -28,9 +28,26 @@ semitone, C2–D5, with seamless crossfade loops) from a CC0 studio recording:
 > No in-app attribution screen is legally required (CC0). The previous CC-BY
 > "Wetthasinghe" soundfont was replaced by this CC0 multisample.
 
+## `soundfonts/tanpura.sf2` — source (CC0, no attribution required)
+
+A **3-zone plucked-string tanpura** built in-repo from three CC0 single-note
+tanpura plucks (one real acoustic pluck per string, with the full jawari bloom):
+
+- **Source recordings:** "Tanpura note Low C sharp / G sharp / C sharp" by
+  **luckylittleraven**, pack "Tanpura C Sharp" (#23512):
+  - kharaj C#2 — https://freesound.org/people/luckylittleraven/sounds/416597/
+  - Pa G#2 — https://freesound.org/people/luckylittleraven/sounds/416598/
+  - mid Sa C#3 — https://freesound.org/people/luckylittleraven/sounds/416605/
+- **License:** **Creative Commons 0 (CC0 1.0) — public domain.** Commercial use
+  allowed with **no attribution required.** (Credit appreciated, not required.)
+- **Build:** `./scripts/build_tanpura.py` fetches the CC0 HQ previews from the
+  public freesound CDN, slices each to a clean one-shot (full natural decay, no
+  loop), loudness-matches them, and authors a non-looping SF2 partitioned by
+  pitch. The app's Dart sequencer plays the Pa-Sa-Sa-kharaj cycle through it.
+
 ## Checklist before shipping a paid build
 - [x] Soundfont license permits commercial use with no strings (CC0).
-- [ ] Tanpura loop license verified (drones above are CC0; final tanpura TBD).
+- [x] Tanpura license verified — plucked tanpura.sf2 sources are all CC0.
 - [ ] No YouTube-sourced audio anywhere in the pipeline (spec §6 Path 3, dropped).
 - [ ] (Optional upgrade, spec §6 Path 2) self-record a harmonium for an even
       higher-quality, fully-owned library.

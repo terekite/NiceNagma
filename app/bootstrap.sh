@@ -51,6 +51,12 @@ echo "==> materializing bundled soundfont (on-device rendering) -> assets/soundf
 mkdir -p assets/soundfonts
 cp ../assets/soundfonts/harmonium.sf2 assets/soundfonts/harmonium.sf2
 
+echo "==> materializing bundled tanpura soundfont -> assets/soundfonts/"
+# Same story: the plucked tanpura SF2 (scripts/build_tanpura.py) lives in the
+# canonical repo assets/; copy it in so Flutter can bundle it. The app sequences
+# the Pa-Sa-Sa-kharaj cycle through it and renders it per Sa on device.
+cp ../assets/soundfonts/tanpura.sf2 assets/soundfonts/tanpura.sf2
+
 PLIST="$RUNNER/Info.plist"
 PB=/usr/libexec/PlistBuddy
 echo "==> patching $PLIST (ATS local networking, local-network prompt, background audio)"

@@ -15,8 +15,12 @@ import 'package:flutter/foundation.dart';
 import '../config.dart';
 import '../taal.dart';
 import '../render/reduce.dart' show layaForBpm;
+import '../render/first_string.dart';
+import '../render/models.dart' show NagmaDoc;
+import '../render/parser.dart';
 import '../services/loop_player.dart';
 import '../services/local_renderer.dart';
+import '../services/tanpura_renderer.dart';
 import '../services/render_client.dart'; // re-exports LoopRenderer, RenderRequest, NagmaRejected
 
 /// Pick the renderer from Config.renderer: on-device by default, HTTP service
@@ -46,6 +50,10 @@ class PlayerController extends ChangeNotifier {
   String? nagmaError; // inline editor validation (422)
   bool serviceHealthy = true;
   double tanpuraVolume = 0;
+  double lehraVolume = 1;
+
+  final TanpuraRenderer _tanpura = TanpuraRenderer();
+  int _tanpuraGeneration = 0; // guards against stale tanpura renders landing late
 
   // --- High-frequency audio-clock position (wheel + matra counter) ---
   final ValueNotifier<LoopPosition> position =
@@ -69,7 +77,36 @@ class PlayerController extends ChangeNotifier {
     });
     serviceHealthy = await _client.healthy();
     if (!serviceHealthy) notifyListeners();
-    await _renderAndLoad();
+    // Render the lehra and tanpura independently so one failing never blocks the
+    // other. The tanpura bus starts muted (tanpuraVolume 0) until the slider rises.
+    await Future.wait([_renderAndLoad(), _renderAndLoadTanpura()]);
+  }
+
+  /// The first-string swar for the current nagma (Pa/Ma/tivra-Ma/Ni, auto-derived).
+  /// Falls back to Pa if the nagma doesn't parse.
+  String get _firstStringSwar {
+    try {
+      final NagmaDoc doc = parseNagma(nagmaText, taal: taalName);
+      return selectFirstStringSwar(swarsInDoc(doc));
+    } catch (_) {
+      return 'P';
+    }
+  }
+
+  /// Render the tanpura loop for the current Sa + auto first-string, then load it
+  /// onto the (independent) tanpura bus. A tanpura failure must never block the
+  /// lehra, so everything here is best-effort.
+  Future<void> _renderAndLoadTanpura() async {
+    final gen = ++_tanpuraGeneration;
+    try {
+      final path = await _tanpura.getTanpura(
+        TanpuraRequest(sa: sa, firstStringSwar: _firstStringSwar, seed: 0),
+      );
+      if (gen != _tanpuraGeneration) return; // a newer change superseded us
+      await _player.loadTanpura(path); // hot-swaps the buffer; keeps playing
+    } catch (_) {
+      // Leave the tanpura silent on failure.
+    }
   }
 
   /// The laya the renderer auto-selects for the current BPM, for display. Calls
@@ -102,6 +139,8 @@ class PlayerController extends ChangeNotifier {
     sa = v;
     notifyListeners();
     _scheduleReRender();
+    // The tanpura re-renders in-tune for the new Sa (exact, not a pitch shift).
+    _renderAndLoadTanpura();
   }
 
   /// Apply an edited nagma. Returns true if it rendered, false if rejected
@@ -111,12 +150,20 @@ class PlayerController extends ChangeNotifier {
     nagmaError = null;
     notifyListeners();
     await _renderAndLoad();
+    // The first-string tuning may change with the notes, so re-render the tanpura.
+    _renderAndLoadTanpura();
     return nagmaError == null;
   }
 
   Future<void> setTanpuraVolume(double v) async {
     tanpuraVolume = v.clamp(0, 1).toDouble();
     await _player.setTanpuraVolume(tanpuraVolume);
+    notifyListeners();
+  }
+
+  Future<void> setLehraVolume(double v) async {
+    lehraVolume = v.clamp(0, 1).toDouble();
+    await _player.setLehraVolume(lehraVolume);
     notifyListeners();
   }
 

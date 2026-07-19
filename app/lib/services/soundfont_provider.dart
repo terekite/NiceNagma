@@ -16,6 +16,7 @@ class SoundfontProvider {
   /// Instrument -> bundled asset. Add on-demand-pack entries here later.
   static const Map<String, String> _bundled = {
     'harmonium': 'assets/soundfonts/harmonium.sf2',
+    'tanpura': 'assets/soundfonts/tanpura.sf2',
   };
 
   /// Filesystem path to the instrument's .sf2, materializing the bundled asset on

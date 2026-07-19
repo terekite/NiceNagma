@@ -61,7 +61,7 @@ class PlayerScreen extends StatelessWidget {
                         const SizedBox(height: 12),
                         _SaControl(controller: controller),
                         const SizedBox(height: 12),
-                        _TanpuraControl(controller: controller),
+                        _MixControls(controller: controller),
                       ],
                     ),
                   ),
@@ -168,21 +168,62 @@ class _SaControl extends StatelessWidget {
   }
 }
 
-class _TanpuraControl extends StatelessWidget {
+/// Mix section: independent Lehra and Tanpura volumes, so the user can play the
+/// lehra alone, solo the tanpura drone (drop Lehra to 0), or blend the two.
+class _MixControls extends StatelessWidget {
   final PlayerController controller;
-  const _TanpuraControl({required this.controller});
+  const _MixControls({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Mix', style: Theme.of(context).textTheme.labelLarge),
+        _VolumeRow(
+          icon: Icons.piano,
+          label: 'Lehra',
+          value: controller.lehraVolume,
+          onChanged: controller.setLehraVolume,
+        ),
+        _VolumeRow(
+          icon: Icons.music_note,
+          label: 'Tanpura',
+          value: controller.tanpuraVolume,
+          onChanged: controller.setTanpuraVolume,
+        ),
+      ],
+    );
+  }
+}
+
+class _VolumeRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final double value;
+  final ValueChanged<double> onChanged;
+  const _VolumeRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Icon(Icons.music_note, size: 20),
+        Icon(icon, size: 20),
         const SizedBox(width: 8),
-        Text('Tanpura', style: Theme.of(context).textTheme.labelLarge),
+        SizedBox(
+          width: 64,
+          child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
+        ),
         Expanded(
           child: Slider(
-            value: controller.tanpuraVolume,
-            onChanged: controller.setTanpuraVolume,
+            value: value,
+            label: '${(value * 100).round()}%',
+            onChanged: onChanged,
           ),
         ),
       ],

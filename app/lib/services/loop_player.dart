@@ -83,4 +83,8 @@ class LoopPlayer {
   /// Tanpura drone bus volume, 0..1.
   Future<void> setTanpuraVolume(double v) =>
       _method.invokeMethod('setTanpuraVolume', {'volume': v});
+
+  /// Lehra bus volume, 0..1 (0 solos the tanpura).
+  Future<void> setLehraVolume(double v) =>
+      _method.invokeMethod('setLehraVolume', {'volume': v});
 }

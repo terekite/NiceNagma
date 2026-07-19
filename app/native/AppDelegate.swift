@@ -40,6 +40,7 @@ import UIKit
 final class LoopPlayer: NSObject, FlutterStreamHandler {
   private let engine = AVAudioEngine()
   private let lehra = AVAudioPlayerNode()
+  private let lehraMixer = AVAudioMixerNode()
   private let tanpura = AVAudioPlayerNode()
   private let tanpuraMixer = AVAudioMixerNode()
 
@@ -120,10 +121,15 @@ final class LoopPlayer: NSObject, FlutterStreamHandler {
 
   private func configureEngine() {
     engine.attach(lehra)
+    engine.attach(lehraMixer)
     engine.attach(tanpura)
     engine.attach(tanpuraMixer)
     let fmt = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 2)
-    engine.connect(lehra, to: engine.mainMixerNode, format: fmt)
+    // Each source gets its own mixer so the UI can set lehra/tanpura volume
+    // independently (solo the drone, or blend them at any ratio).
+    engine.connect(lehra, to: lehraMixer, format: fmt)
+    engine.connect(lehraMixer, to: engine.mainMixerNode, format: fmt)
+    // The tanpura WAV is rendered in-tune per Sa, so no pitch shifter is needed.
     engine.connect(tanpura, to: tanpuraMixer, format: fmt)
     engine.connect(tanpuraMixer, to: engine.mainMixerNode, format: fmt)
     tanpuraMixer.outputVolume = 0  // muted until the user raises the mix
@@ -161,7 +167,13 @@ final class LoopPlayer: NSObject, FlutterStreamHandler {
       catch { result(FlutterError(code: "tanpura_failed", message: error.localizedDescription, details: nil)) }
     case "setTanpuraVolume":
       let v = (call.arguments as? [String: Any])?["volume"] as? Double ?? 0
-      tanpuraMixer.outputVolume = Float(max(0, min(1, v)))
+      // Headroom: the tanpura's ceiling sits well below the lehra's so a full drone
+      // stays a background reference and never overpowers the lehra.
+      tanpuraMixer.outputVolume = Float(max(0, min(1, v)) * 0.55)
+      result(nil)
+    case "setLehraVolume":
+      let v = (call.arguments as? [String: Any])?["volume"] as? Double ?? 1
+      lehraMixer.outputVolume = Float(max(0, min(1, v)))
       result(nil)
     default:
       result(FlutterMethodNotImplemented)
@@ -184,7 +196,7 @@ final class LoopPlayer: NSObject, FlutterStreamHandler {
     let wasPlaying = isPlaying
     lehra.stop()
     engine.disconnectNodeOutput(lehra)
-    engine.connect(lehra, to: engine.mainMixerNode, format: fmt)
+    engine.connect(lehra, to: lehraMixer, format: fmt)
 
     lehraBuffer = buffer
     loopFrames = file.length
@@ -336,13 +348,18 @@ final class OfflineRenderer {
       }
       let bellowsRate = a["bellowsRateHz"] as? Double ?? 0.25
       let bellowsDepth = a["bellowsDepth"] as? Double ?? 0.09
+      // Plucked instruments (tanpura) skip the harmonium bellows/chorus and use a
+      // wider seam-fold (long pluck ring at the wrap) + gentler reverb.
+      let pluck = a["pluck"] as? Bool ?? false
+      let chorusWet = a["chorusWet"] as? Double ?? 0.2
 
       DispatchQueue.global(qos: .userInitiated).async {
         do {
           let frames = try OfflineRenderer.render(
             midiPath: midiPath, soundfontPath: sfPath, outPath: outPath,
             sampleRate: Double(sr), loopLengthSamples: loopSamples,
-            bellowsRateHz: bellowsRate, bellowsDepth: bellowsDepth)
+            bellowsRateHz: bellowsRate, bellowsDepth: bellowsDepth,
+            pluck: pluck, chorusWet: chorusWet)
           DispatchQueue.main.async { result(frames) }
         } catch {
           DispatchQueue.main.async {
@@ -359,7 +376,6 @@ final class OfflineRenderer {
   private static let maxWrapS = 0.6           // seam-wrap window (release + reverb tail)
   private static let tailS = 0.9              // extra frames rendered past the loop end
   private static let reverbWetDryMix: Float = 12.0  // percent; native room presence
-  private static let chorusWet = 0.2
   private struct ChorusVoice { let baseMs, depthMs, rateHz, phase: Double }
   private static let chorusVoices = [
     ChorusVoice(baseMs: 12.0, depthMs: 2.5, rateHz: 0.7, phase: 0.0),
@@ -381,13 +397,23 @@ final class OfflineRenderer {
   static func render(
     midiPath: String, soundfontPath: String, outPath: String,
     sampleRate: Double, loopLengthSamples: Int,
-    bellowsRateHz: Double, bellowsDepth: Double
+    bellowsRateHz: Double, bellowsDepth: Double,
+    pluck: Bool = false, chorusWet chorusWetArg: Double = 0.2
   ) throws -> Int {
+    // Pluck preset (tanpura): render the full pluck ring past the loop end and fold
+    // it back CIRCULARLY (not a short fade) so the drone density is identical at the
+    // loop point — a truly periodic, gapless loop. A soft reverb wash blends the
+    // plucks so they read as a sustained pedal rather than firm individual strokes.
+    let tailS = pluck ? 10.0 : OfflineRenderer.tailS
+    let maxWrapS = pluck ? 0.0 : OfflineRenderer.maxWrapS
+    let reverbMix: Float = pluck ? 24.0 : reverbWetDryMix
+    let chorusWet = pluck ? 0.0 : chorusWetArg
+
     let engine = AVAudioEngine()
     let sampler = AVAudioUnitSampler()
     let reverb = AVAudioUnitReverb()
     reverb.loadFactoryPreset(.mediumRoom)
-    reverb.wetDryMix = reverbWetDryMix
+    reverb.wetDryMix = reverbMix
 
     engine.attach(sampler)
     engine.attach(reverb)
@@ -438,10 +464,12 @@ final class OfflineRenderer {
     sequencer.stop()
     engine.stop()
 
-    var (bodyL, bodyR) = seamWrap(left, right, n: loopLengthSamples, sampleRate: sampleRate)
+    var (bodyL, bodyR) = seamWrap(left, right, n: loopLengthSamples,
+                                  sampleRate: sampleRate, maxWrapS: maxWrapS,
+                                  circular: pluck)
     applyBellows(&bodyL, &bodyR, sampleRate: sampleRate,
                  rateHz: bellowsRateHz, depth: bellowsDepth)
-    if chorusWet > 0 { applyChorus(&bodyL, &bodyR, sampleRate: sampleRate) }
+    if chorusWet > 0 { applyChorus(&bodyL, &bodyR, sampleRate: sampleRate, wet: chorusWet) }
     normalize(&bodyL, &bodyR)
 
     try writeWav(bodyL, bodyR, outPath: outPath, sampleRate: sampleRate)
@@ -450,23 +478,35 @@ final class OfflineRenderer {
 
   // MARK: DSP (ports of render/master.py)
 
-  /// Trim to exactly n; fold the natural overhang (release + reverb tail) onto the
-  /// head with an equal-power fade so cycle N resolves into sam with no click.
+  /// Trim to exactly n and fold the natural overhang (release + reverb + pluck
+  /// ring) back onto the head so the loop is gapless. `circular` (drones): add the
+  /// ENTIRE overhang back modulo n at full level, so a note ringing past the loop
+  /// end reappears at the start exactly as an infinite loop would — the density is
+  /// identical at the seam. Otherwise (lehra): an equal-power fade over maxWrapS.
   private static func seamWrap(_ left: [Float], _ right: [Float], n: Int,
-                               sampleRate: Double) -> ([Float], [Float]) {
+                               sampleRate: Double, maxWrapS: Double,
+                               circular: Bool = false) -> ([Float], [Float]) {
     var bodyL = [Float](repeating: 0, count: n)
     var bodyR = [Float](repeating: 0, count: n)
     let m = left.count
     let copy = min(m, n)
     for i in 0..<copy { bodyL[i] = left[i]; bodyR[i] = right[i] }
     if m > n {
-      let wrap = min(m - n, Int(maxWrapS * sampleRate), n)
-      let denom = Double(max(1, wrap - 1))
-      for i in 0..<wrap {
-        let c = cos(Double(i) / denom * .pi / 2)
-        let fade = Float(c * c)
-        bodyL[i] += left[n + i] * fade
-        bodyR[i] += right[n + i] * fade
+      if circular {
+        for j in n..<m {
+          let k = (j - n) % n
+          bodyL[k] += left[j]
+          bodyR[k] += right[j]
+        }
+      } else {
+        let wrap = min(m - n, Int(maxWrapS * sampleRate), n)
+        let denom = Double(max(1, wrap - 1))
+        for i in 0..<wrap {
+          let c = cos(Double(i) / denom * .pi / 2)
+          let fade = Float(c * c)
+          bodyL[i] += left[n + i] * fade
+          bodyR[i] += right[n + i] * fade
+        }
       }
     }
     return (bodyL, bodyR)
@@ -490,7 +530,7 @@ final class OfflineRenderer {
   /// Double-reed shimmer via modulated fractional delay (chorus), read circularly
   /// so the loop stays exact-length and seamless; each LFO runs whole cycles.
   private static func applyChorus(_ bodyL: inout [Float], _ bodyR: inout [Float],
-                                  sampleRate: Double) {
+                                  sampleRate: Double, wet chorusWet: Double) {
     let n = bodyL.count
     var chL = [Float](repeating: 0, count: n)
     var chR = [Float](repeating: 0, count: n)
