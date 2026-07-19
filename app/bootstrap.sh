@@ -51,6 +51,12 @@ echo "==> materializing bundled soundfont (on-device rendering) -> assets/soundf
 mkdir -p assets/soundfonts
 cp ../assets/soundfonts/harmonium.sf2 assets/soundfonts/harmonium.sf2
 
+echo "==> materializing bundled sarangi soundfont -> assets/soundfonts/"
+# Same story: the bowed-string sarangi SF2 (scripts/build_sarangi.py) lives in the
+# canonical repo assets/; copy it in so Flutter can bundle it. It's a selectable
+# melodic voice, compiled + rendered per Sa on device like the harmonium.
+cp ../assets/soundfonts/sarangi.sf2 assets/soundfonts/sarangi.sf2
+
 PLIST="$RUNNER/Info.plist"
 PB=/usr/libexec/PlistBuddy
 echo "==> patching $PLIST (ATS local networking, local-network prompt, background audio)"

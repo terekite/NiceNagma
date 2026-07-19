@@ -16,6 +16,10 @@ class SoundfontProvider {
   /// Instrument -> bundled asset. Add on-demand-pack entries here later.
   static const Map<String, String> _bundled = {
     'harmonium': 'assets/soundfonts/harmonium.sf2',
+    // Bowed-string sarangi (~6 MB, 39 looped zones C2..D5, built by
+    // scripts/build_sarangi.py from CC0 single notes). A selectable melodic
+    // voice alongside the harmonium.
+    'sarangi': 'assets/soundfonts/sarangi.sf2',
   };
 
   /// Filesystem path to the instrument's .sf2, materializing the bundled asset on

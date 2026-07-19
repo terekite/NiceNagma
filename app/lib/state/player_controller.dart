@@ -37,6 +37,7 @@ class PlayerController extends ChangeNotifier {
   double bpm = Config.defaultBpm;
   String sa = Config.defaultSa;
   String taalName = Config.defaultTaal;
+  String instrument = Config.defaultInstrument;
   int avartans = Config.defaultAvartans;
 
   // --- Playback / render state ---
@@ -104,6 +105,13 @@ class PlayerController extends ChangeNotifier {
     _scheduleReRender();
   }
 
+  void setInstrument(String v) {
+    if (v == instrument) return;
+    instrument = v;
+    notifyListeners();
+    _scheduleReRender();
+  }
+
   /// Apply an edited nagma. Returns true if it rendered, false if rejected
   /// (in which case `nagmaError` holds the parser message).
   Future<bool> setNagma(String text) async {
@@ -136,6 +144,7 @@ class PlayerController extends ChangeNotifier {
       nagmaText: nagmaText,
       bpm: bpm,
       sa: sa,
+      instrument: instrument,
       taal: taalName,
       avartans: avartans,
     );

@@ -29,6 +29,11 @@ class Config {
   static const int defaultAvartans = 4;
   static const String defaultTaal = 'teentaal';
 
+  // Selectable melodic instruments (each has a bundled .sf2 in SoundfontProvider).
+  // Changing the instrument is a re-render — it's part of the cache key.
+  static const String defaultInstrument = 'harmonium';
+  static const List<String> instruments = ['harmonium', 'sarangi'];
+
   // Tempo control range. Laya (vilambit/madhya/drut) is auto-selected server-side.
   static const double minBpm = 30;
   static const double maxBpm = 300;

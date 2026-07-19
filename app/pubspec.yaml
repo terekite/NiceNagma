@@ -30,3 +30,6 @@ flutter:
   # instruments are downloaded on demand, not bundled — see SoundfontProvider.
   assets:
     - assets/soundfonts/harmonium.sf2
+    # Bowed-string sarangi (~6 MB, 39 looped zones). A selectable melodic voice;
+    # compiled + rendered per Sa on device like the harmonium.
+    - assets/soundfonts/sarangi.sf2
