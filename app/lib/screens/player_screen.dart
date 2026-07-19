@@ -59,6 +59,8 @@ class PlayerScreen extends StatelessWidget {
                         const SizedBox(height: 16),
                         _TempoControl(controller: controller),
                         const SizedBox(height: 12),
+                        _InstrumentControl(controller: controller),
+                        const SizedBox(height: 12),
                         _SaControl(controller: controller),
                         const SizedBox(height: 12),
                         _TanpuraControl(controller: controller),
@@ -159,6 +161,34 @@ class _SaControl extends StatelessWidget {
                   label: Text(k),
                   selected: controller.sa == k,
                   onSelected: (_) => controller.setSa(k),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _InstrumentControl extends StatelessWidget {
+  final PlayerController controller;
+  const _InstrumentControl({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text('Instrument', style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Wrap(
+            spacing: 6,
+            children: [
+              for (final inst in Config.instruments)
+                ChoiceChip(
+                  label: Text('${inst[0].toUpperCase()}${inst.substring(1)}'),
+                  selected: controller.instrument == inst,
+                  onSelected: (_) => controller.setInstrument(inst),
                 ),
             ],
           ),

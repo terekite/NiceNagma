@@ -29,6 +29,11 @@ class Config {
   static const int defaultAvartans = 4;
   static const String defaultTaal = 'teentaal';
 
+  // Selectable instruments. Each must have a bundled/downloadable soundfont
+  // (see SoundfontProvider). Harmonium is the reed default; sitar is plucked.
+  static const String defaultInstrument = 'harmonium';
+  static const List<String> instruments = ['harmonium', 'sitar'];
+
   // Tempo control range. Laya (vilambit/madhya/drut) is auto-selected server-side.
   static const double minBpm = 30;
   static const double maxBpm = 300;
