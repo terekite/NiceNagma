@@ -10,7 +10,13 @@ import 'nagma_editor_screen.dart';
 
 class PlayerScreen extends StatelessWidget {
   final PlayerController controller;
-  const PlayerScreen({super.key, required this.controller});
+
+  /// Invoked by the top-right edit button. In the swipeable [PlayerShell] this
+  /// animates the PageView to the editor page; when null (screen used as a
+  /// standalone route) it falls back to pushing the editor as a MaterialPageRoute.
+  final VoidCallback? onEdit;
+
+  const PlayerScreen({super.key, required this.controller, this.onEdit});
 
   @override
   Widget build(BuildContext context) {
@@ -25,11 +31,13 @@ class PlayerScreen extends StatelessWidget {
               IconButton(
                 tooltip: 'Edit lehra',
                 icon: const Icon(Icons.edit_note),
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => NagmaEditorScreen(controller: controller),
-                  ),
-                ),
+                onPressed: onEdit ??
+                    () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                NagmaEditorScreen(controller: controller),
+                          ),
+                        ),
               ),
             ],
           ),
