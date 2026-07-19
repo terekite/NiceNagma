@@ -212,5 +212,8 @@ def realize(
         avartans=avartans,
         seed=seed,
         instrument=instrument,
-        grace_density=perf.GRACE_DENSITY_BY_LAYA.get(laya, perf.GRACE_DENSITY),
+        # Plucked instruments (sitar) take no kan-swar graces.
+        grace_density=0.0
+        if perf.is_plucked(instrument)
+        else perf.GRACE_DENSITY_BY_LAYA.get(laya, perf.GRACE_DENSITY),
     )

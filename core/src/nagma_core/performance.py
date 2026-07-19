@@ -93,6 +93,15 @@ def apply_velocity_noise(rng: random.Random, velocity: int) -> int:
     return max(_VELOCITY_MIN, min(_VELOCITY_MAX, v))
 
 
+# Plucked lutes (sitar) don't take harmonium-style kan-swar grace notes — you
+# don't flick those on a plucked string — so they render with grace density 0.
+PLUCKED_INSTRUMENTS = frozenset({"sitar"})
+
+
+def is_plucked(instrument: str) -> bool:
+    return instrument in PLUCKED_INSTRUMENTS
+
+
 # Grace notes (kan swar): a light, quick neighbour-swar flicked in just before a
 # main note. Applied sparingly and varied per avartan so it never sounds
 # rubber-stamped. The grace steals time from BEFORE the main onset, so matra

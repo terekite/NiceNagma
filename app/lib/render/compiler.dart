@@ -221,6 +221,9 @@ ExpressiveScore realize(
     avartans: avartans,
     seed: seed,
     instrument: instrument,
-    graceDensity: perf.graceDensityByLaya[laya] ?? perf.graceDensity,
+    // Plucked instruments (sitar) take no kan-swar graces.
+    graceDensity: perf.isPlucked(instrument)
+        ? 0.0
+        : (perf.graceDensityByLaya[laya] ?? perf.graceDensity),
   );
 }

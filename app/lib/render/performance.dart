@@ -41,6 +41,11 @@ const double swellFullAtS = 0.8;
 const int _velocityMin = 24;
 const int _velocityMax = 122;
 
+// Plucked lutes (sitar) don't take harmonium-style kan-swar grace notes — you
+// don't flick those on a plucked string — so they render with grace density 0.
+const Set<String> pluckedInstruments = {'sitar'};
+bool isPlucked(String instrument) => pluckedInstruments.contains(instrument);
+
 // Grace notes (kan swar).
 const double graceDensity = 0.12;
 const Map<String, double> graceDensityByLaya = {
