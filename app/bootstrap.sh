@@ -50,6 +50,8 @@ echo "==> materializing bundled soundfont (on-device rendering) -> assets/soundf
 # avoid duplicating ~5.6 MB into the app package.
 mkdir -p assets/soundfonts
 cp ../assets/soundfonts/harmonium.sf2 assets/soundfonts/harmonium.sf2
+# Plucked sitar SF2 (scripts/build_sitar.py): jawari buzz + sympathetic ring.
+cp ../assets/soundfonts/sitar.sf2 assets/soundfonts/sitar.sf2
 
 PLIST="$RUNNER/Info.plist"
 PB=/usr/libexec/PlistBuddy
