@@ -67,8 +67,6 @@ class PlayerScreen extends StatelessWidget {
                         const SizedBox(height: 16),
                         _TempoControl(controller: controller),
                         const SizedBox(height: 12),
-                        _SaControl(controller: controller),
-                        const SizedBox(height: 12),
                         _MixControls(controller: controller),
                       ],
                     ),
@@ -180,7 +178,14 @@ class _LayaReadout extends StatelessWidget {
               color: scheme.secondaryContainer),
         ),
         const SizedBox(width: 8),
-        _Chip(label: 'Sa ${controller.sa}', color: scheme.tertiaryContainer),
+        // The Sa chip is tappable: tap to pick the key from the 12-key grid. Like
+        // the BPM chip, it and controller.setSa are now the only way to change Sa.
+        InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => _showSaDialog(context, controller),
+          child: _Chip(
+              label: 'Sa ${controller.sa}', color: scheme.tertiaryContainer),
+        ),
         const SizedBox(width: 8),
         _Chip(label: 'Teentaal', color: scheme.surfaceContainerHighest),
       ],
@@ -228,33 +233,41 @@ class _TempoControl extends StatelessWidget {
   }
 }
 
-class _SaControl extends StatelessWidget {
-  final PlayerController controller;
-  const _SaControl({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Text('Sa (key)', style: Theme.of(context).textTheme.labelLarge),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Wrap(
-            spacing: 6,
-            children: [
-              for (final k in Config.keys)
-                ChoiceChip(
-                  label: Text(k),
-                  selected: controller.sa == k,
-                  onSelected: (_) => controller.setSa(k),
-                ),
-            ],
-          ),
+/// Prompt for the Sa (key). Sa is one of 12 discrete keys, so — unlike tempo —
+/// there is nothing to type: the dialog shows the 12 keys as a ChoiceChip grid
+/// with the current Sa pre-selected. Tapping a key routes through
+/// controller.setSa (the same path the old always-visible chip row used, which
+/// re-renders the lehra + tanpura in the new key) and pops. Cancel dismisses
+/// without change. Stateless — no TextEditingController, so no dispose-race to
+/// guard against as the tempo dialog has.
+Future<void> _showSaDialog(BuildContext context, PlayerController controller) =>
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Set Sa (key)'),
+        content: Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (final k in Config.keys)
+              ChoiceChip(
+                label: Text(k),
+                selected: controller.sa == k,
+                onSelected: (_) {
+                  controller.setSa(k);
+                  Navigator.of(dialogContext).pop();
+                },
+              ),
+          ],
         ),
-      ],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
     );
-  }
-}
 
 /// Mix section: independent Lehra and Tanpura volumes, so the user can play the
 /// lehra alone, solo the tanpura drone (drop Lehra to 0), or blend the two.
