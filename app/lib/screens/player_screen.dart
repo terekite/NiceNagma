@@ -245,17 +245,41 @@ class _TempoControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // -5 / +5 buttons flank the slider. All three (buttons, slider, and the
+    // tap-to-type BPM chip) drive controller.setBpm, which clamps to
+    // Config.minBpm/maxBpm and fires the debounced re-render + laya-label update,
+    // so they stay in sync automatically. Buttons disable at the bounds.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Tempo', style: Theme.of(context).textTheme.labelLarge),
-        Slider(
-          min: Config.minBpm,
-          max: Config.maxBpm,
-          divisions: (Config.maxBpm - Config.minBpm) ~/ 2,
-          value: controller.bpm,
-          label: '${controller.bpm.round()} BPM',
-          onChanged: controller.setBpm,
+        Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.remove),
+              tooltip: '-5 BPM',
+              onPressed: controller.bpm > Config.minBpm
+                  ? () => controller.setBpm(controller.bpm - 5)
+                  : null,
+            ),
+            Expanded(
+              child: Slider(
+                min: Config.minBpm,
+                max: Config.maxBpm,
+                divisions: (Config.maxBpm - Config.minBpm) ~/ 2,
+                value: controller.bpm,
+                label: '${controller.bpm.round()} BPM',
+                onChanged: controller.setBpm,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.add),
+              tooltip: '+5 BPM',
+              onPressed: controller.bpm < Config.maxBpm
+                  ? () => controller.setBpm(controller.bpm + 5)
+                  : null,
+            ),
+          ],
         ),
       ],
     );
