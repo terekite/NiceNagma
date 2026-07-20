@@ -40,6 +40,11 @@ class _NagmaEditorScreenState extends State<NagmaEditorScreen>
   bool _applying = false;
   String? _error;
 
+  // The text last handed to [setNagma] (whether it succeeded or was rejected).
+  // Seeded with the already-committed nagma so an outside-tap that changed
+  // nothing is a no-op, and a 422 draft isn't re-applied on every tap-away.
+  late String _lastAppliedText = widget.controller.nagmaText;
+
   @override
   bool get wantKeepAlive => true;
 
@@ -63,7 +68,13 @@ class _NagmaEditorScreenState extends State<NagmaEditorScreen>
     super.dispose();
   }
 
-  Future<void> _apply() async {
+  /// Apply the current draft. The Apply button returns to the player on
+  /// success ([close] = true); auto-apply (tap-outside) stays on the editor.
+  Future<void> _apply({bool close = true}) async {
+    // Mark this text as attempted before rendering: on a 422 the parser
+    // message surfaces inline, and tapping away again won't re-render the same
+    // broken draft — only editing the text (making it differ) re-applies.
+    _lastAppliedText = _text.text;
     setState(() {
       _applying = true;
       _error = null;
@@ -74,7 +85,17 @@ class _NagmaEditorScreenState extends State<NagmaEditorScreen>
       _applying = false;
       _error = ok ? null : widget.controller.nagmaError;
     });
-    if (ok) _close();
+    if (ok && close) _close();
+  }
+
+  /// Tap-outside handler: dismiss the keyboard and apply the draft in place.
+  /// Skips when a render is already in flight or the text is unchanged. Taps on
+  /// the AppBar's Apply/back controls are excluded (they sit in a
+  /// [TextFieldTapRegion]), so this fires only for taps in the editor body.
+  void _autoApply() {
+    if (_focus.hasFocus) _focus.unfocus();
+    if (_applying || _text.text == _lastAppliedText) return;
+    _apply(close: false);
   }
 
   @override
@@ -85,21 +106,29 @@ class _NagmaEditorScreenState extends State<NagmaEditorScreen>
       appBar: AppBar(
         // When embedded in the shell there is no route to pop, so provide an
         // explicit back arrow; as a pushed route, let the default one show.
+        // The back arrow and Apply live in a TextFieldTapRegion so tapping them
+        // counts as "inside" the field: they run their own action (close /
+        // apply-and-close) without _autoApply firing first. Back therefore
+        // still leaves an unapplied draft intact, and Apply doesn't double-render.
         leading: widget.onClose != null
-            ? IconButton(
-                tooltip: 'Back to player',
-                icon: const Icon(Icons.arrow_back),
-                onPressed: _close,
+            ? TextFieldTapRegion(
+                child: IconButton(
+                  tooltip: 'Back to player',
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: _close,
+                ),
               )
             : null,
         title: const Text('Edit lehra'),
         actions: [
-          TextButton(
-            onPressed: _applying ? null : _apply,
-            child: _applying
-                ? const SizedBox(
-                    width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Apply'),
+          TextFieldTapRegion(
+            child: TextButton(
+              onPressed: _applying ? null : _apply,
+              child: _applying
+                  ? const SizedBox(
+                      width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Apply'),
+            ),
           ),
         ],
       ),
@@ -117,6 +146,10 @@ class _NagmaEditorScreenState extends State<NagmaEditorScreen>
             TextField(
               controller: _text,
               focusNode: _focus,
+              // Tapping outside the field dismisses focus and applies the draft
+              // in place (Flutter keeps the keyboard up on mobile by default,
+              // so we unfocus explicitly). Apply button still returns to player.
+              onTapOutside: (_) => _autoApply(),
               maxLines: 8,
               style: const TextStyle(fontFamily: 'monospace', fontSize: 16),
               decoration: InputDecoration(
