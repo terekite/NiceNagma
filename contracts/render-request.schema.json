@@ -16,7 +16,7 @@
       "$ref": "https://nicenagma.app/contracts/nagma-doc.schema.json",
       "description": "A pre-parsed NagmaDoc. One of nagma_text or nagma must be provided."
     },
-    "taal": { "type": "string", "enum": ["teentaal"], "default": "teentaal" },
+    "taal": { "type": "string", "enum": ["teentaal", "dadra", "rupak", "jhaptaal", "ektaal", "dhamar", "pancham_sawari"], "default": "teentaal" },
     "bpm": { "type": "number", "minimum": 40, "maximum": 240 },
     "sa": {
       "type": "string",

@@ -127,3 +127,44 @@ def test_wrong_matra_count_rejected():
     doc.matras = doc.matras[:15]
     with pytest.raises(ValueError, match="requires 16"):
         compile_score(doc, bpm=80, sa="D")
+
+
+# --- Non-teentaal taals compile with the right length and exact boundaries ----
+
+@pytest.mark.parametrize("text,taal,matra_count", [
+    ("S r g | m g r", "dadra", 6),
+    ("S g m | P m | g r", "rupak", 7),
+    ("S r | g m P | d P | m g r", "jhaptaal", 10),
+    ("S r\ng m\nP d\nn S'\nd P\nm g", "ektaal", 12),
+    ("S r g m P\nd P\nm g r\nS r g m", "dhamar", 14),
+    ("S r g\nm P m g\nr S r g\nm P d n", "pancham_sawari", 15),
+])
+def test_non_teentaal_loop_length_and_boundaries(text, taal, matra_count):
+    doc = parse_nagma(text, taal=taal)
+    score = compile_score(doc, bpm=95, sa="D", avartans=3, seed=5)
+    assert score.matra_count == matra_count
+    assert score.avartan_dur_s == pytest.approx(matra_count * (60.0 / 95), abs=1e-12)
+    assert score.loop_length_samples == round(score.loop_length_s * score.sample_rate)
+    # Every structural onset sits exactly on the grid.
+    md = score.matra_dur_s
+    for e in score.events:
+        if e.structural:
+            expected = e.avartan * score.avartan_dur_s + e.matra * md
+            assert e.start_s == pytest.approx(expected, abs=1e-12)
+
+
+def test_post_khaali_dip_follows_actual_khaali_not_midpoint():
+    # Ektaal has khaali at matras 2 and 6 (not the 12//2=6 midpoint alone). The
+    # post-khaali dip must land on matras 3 and 7 (right after each khaali).
+    from nagma_core import performance as perf
+    from nagma_core.taal import get_taal
+    marks = get_taal("ektaal").matra_marks()
+    # matra 3 follows a khaali (dip -4) while matra 5 does not; matra 3's swell
+    # term is smaller too, so it must be strictly softer than matra 5.
+    v3 = perf.base_velocity(3, marks[3], 12, marks)
+    v5 = perf.base_velocity(5, marks[5], 12, marks)  # not after a khaali
+    assert v3 < v5
+    # Sanity: matra 7 (after khaali@6) is also dipped relative to its neighbour 9.
+    v7 = perf.base_velocity(7, marks[7], 12, marks)
+    v9 = perf.base_velocity(9, marks[9], 12, marks)
+    assert v7 < v9

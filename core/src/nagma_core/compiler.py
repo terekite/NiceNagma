@@ -119,7 +119,7 @@ def compile_score(
         for ev in base:
             jitter = perf.timing_jitter(rng, ev["structural"])
             start = cycle_offset + ev["start_s"] + jitter
-            vel = perf.base_velocity(ev["matra"], ev["mark"], matra_count)
+            vel = perf.base_velocity(ev["matra"], ev["mark"], matra_count, marks)
             vel = perf.apply_velocity_noise(rng, vel)
             swell = perf.swell_depth(rng, ev["dur_s"], ev["structural"])
             events.append(

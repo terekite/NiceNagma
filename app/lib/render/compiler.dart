@@ -127,7 +127,7 @@ ExpressiveScore compileScore(
     for (final ev in base) {
       final jitter = perf.timingJitter(rng, ev.structural);
       final start = cycleOffset + ev.startS + jitter;
-      var vel = perf.baseVelocity(ev.matra, ev.mark, matraCount);
+      var vel = perf.baseVelocity(ev.matra, ev.mark, matraCount, marks);
       vel = perf.applyVelocityNoise(rng, vel);
       final swell = perf.swellDepth(rng, ev.durS, ev.structural);
       events.add(Event(

@@ -46,4 +46,45 @@ S S S N.,S
 g R N. S
 M. P. g. R.,S.
 g. M. P. N.''';
+
+  // Per-taal default nagma, one line per vibhag (comments stripped). Each string
+  // matches its taal's vibhag/matra structure so switching taal always yields a
+  // renderable lehra. These mirror assets/nagmas/stock-*.nagma; the new taals
+  // ship simple Bhairavi placeholders, replaceable with transcribed lehras.
+  static const Map<String, String> _defaultNagmas = {
+    'teentaal': defaultNagma,
+    'dadra': '''
+S r g
+m g r''',
+    'rupak': '''
+S g m
+P m
+g r''',
+    'jhaptaal': '''
+S r
+g m P
+d P
+m g r''',
+    'ektaal': '''
+S r
+g m
+P d
+n S'
+d P
+m g''',
+    'dhamar': '''
+S r g m P
+d P
+m g r
+S r g m''',
+    'pancham_sawari': '''
+S r g
+m P m g
+r S r g
+m P d n''',
+  };
+
+  /// The default nagma for a taal (falls back to the Teentaal lehra).
+  static String defaultNagmaFor(String taal) =>
+      _defaultNagmas[taal] ?? defaultNagma;
 }

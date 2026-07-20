@@ -10,8 +10,8 @@
     "schema_version": { "type": "string", "const": "1.0.0" },
     "taal": {
       "type": "string",
-      "description": "Taal identifier. MVP: 'teentaal' only, but the schema is taal-agnostic.",
-      "enum": ["teentaal"]
+      "description": "Taal identifier. The schema is taal-agnostic; the shipped set is enumerated here.",
+      "enum": ["teentaal", "dadra", "rupak", "jhaptaal", "ektaal", "dhamar", "pancham_sawari"]
     },
     "raag": {
       "type": "string",
@@ -25,7 +25,7 @@
     },
     "matras": {
       "type": "array",
-      "description": "One entry per matra of the taal, in order. Length must equal the taal's matra count (16 for Teentaal).",
+      "description": "One entry per matra of the taal, in order. Length must equal the taal's matra count (e.g. 16 for Teentaal, 10 for Jhaptaal).",
       "items": { "$ref": "#/$defs/matra" }
     }
   },

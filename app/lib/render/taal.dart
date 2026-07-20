@@ -16,7 +16,15 @@ class Vibhag {
 class Taal {
   final String name;
   final List<Vibhag> vibhags;
-  const Taal({required this.name, required this.vibhags});
+  // Rupak's cycle starts ON a khaali: matra 0 is the origin (sam) for timing
+  // and the velocity swell, but is *displayed* as an open (khaali) beat. The
+  // engine still treats matra 0 as 'sam'; only the UI reads this flag.
+  final bool samIsKhaali;
+  const Taal({
+    required this.name,
+    required this.vibhags,
+    this.samIsKhaali = false,
+  });
 
   int get matraCount => vibhags.fold(0, (a, v) => a + v.length);
 
@@ -49,7 +57,83 @@ const Taal teentaal = Taal(
   ],
 );
 
-const Map<String, Taal> _taals = {'teentaal': teentaal};
+// --- Additional taals (standard thekas; see core/.../taal.py for 0-based marks).
+
+/// Dadra: 6 matras, 3+3. sam=0, khaali=3.
+const Taal dadra = Taal(
+  name: 'dadra',
+  vibhags: [
+    Vibhag(length: 3, clap: 'sam'),
+    Vibhag(length: 3, clap: 'khaali'),
+  ],
+);
+
+/// Rupak: 7 matras, 3+2+2. Sam is a khaali (open); taali on 4 and 6.
+const Taal rupak = Taal(
+  name: 'rupak',
+  vibhags: [
+    Vibhag(length: 3, clap: 'sam'),
+    Vibhag(length: 2, clap: 'taali'),
+    Vibhag(length: 2, clap: 'taali'),
+  ],
+  samIsKhaali: true,
+);
+
+/// Jhaptaal: 10 matras, 2+3+2+3. sam=0, taali=2, khaali=5, taali=7.
+const Taal jhaptaal = Taal(
+  name: 'jhaptaal',
+  vibhags: [
+    Vibhag(length: 2, clap: 'sam'),
+    Vibhag(length: 3, clap: 'taali'),
+    Vibhag(length: 2, clap: 'khaali'),
+    Vibhag(length: 3, clap: 'taali'),
+  ],
+);
+
+/// Ektaal: 12 matras, 6x2. sam=0, khaali=2, taali=4, khaali=6, taali=8, taali=10.
+const Taal ektaal = Taal(
+  name: 'ektaal',
+  vibhags: [
+    Vibhag(length: 2, clap: 'sam'),
+    Vibhag(length: 2, clap: 'khaali'),
+    Vibhag(length: 2, clap: 'taali'),
+    Vibhag(length: 2, clap: 'khaali'),
+    Vibhag(length: 2, clap: 'taali'),
+    Vibhag(length: 2, clap: 'taali'),
+  ],
+);
+
+/// Dhamar: 14 matras, 5+2+3+4. sam=0, taali=5, khaali=7, taali=10.
+const Taal dhamar = Taal(
+  name: 'dhamar',
+  vibhags: [
+    Vibhag(length: 5, clap: 'sam'),
+    Vibhag(length: 2, clap: 'taali'),
+    Vibhag(length: 3, clap: 'khaali'),
+    Vibhag(length: 4, clap: 'taali'),
+  ],
+);
+
+/// Pancham Sawari: 15 matras, 3+4+4+4. sam=0, taali=3, khaali=7, taali=11.
+const Taal panchamSawari = Taal(
+  name: 'pancham_sawari',
+  vibhags: [
+    Vibhag(length: 3, clap: 'sam'),
+    Vibhag(length: 4, clap: 'taali'),
+    Vibhag(length: 4, clap: 'khaali'),
+    Vibhag(length: 4, clap: 'taali'),
+  ],
+);
+
+const Map<String, Taal> _taals = {
+  'teentaal': teentaal,
+  'dadra': dadra,
+  'rupak': rupak,
+  'jhaptaal': jhaptaal,
+  'ektaal': ektaal,
+  'dhamar': dhamar,
+  'pancham_sawari': panchamSawari,
+};
 
 Taal getTaal(String name) {
   final t = _taals[name];

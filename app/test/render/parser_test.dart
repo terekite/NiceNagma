@@ -73,4 +73,34 @@ void main() {
     expect(() => parseNagma('- r g m | P d P m | g m P d | P m g r'),
         throwsA(predicate((e) => e is NagmaParseError && e.message.contains('cannot begin with a sustain'))));
   });
+
+  // --- Non-teentaal taals validate against the passed taal's shape.
+
+  test('parses jhaptaal ten matras', () {
+    final doc = parseNagma('S r | g m P | d P | m g r', taal: 'jhaptaal');
+    expect(doc.taal, 'jhaptaal');
+    expect(doc.matras.length, 10);
+    expect([for (final m in doc.matras) m.index], List.generate(10, (i) => i));
+  });
+
+  test('parses ektaal twelve matras six vibhags', () {
+    final doc = parseNagma("S r\ng m\nP d\nn S'\nd P\nm g", taal: 'ektaal');
+    expect(doc.matras.length, 12);
+  });
+
+  test('parses dadra six matras', () {
+    final doc = parseNagma('S r g | m g r', taal: 'dadra');
+    expect(doc.matras.length, 6);
+  });
+
+  test('wrong matra count in vibhag for taal errors', () {
+    expect(
+        () => parseNagma('S r g m | P d P m | g m P d | P m g r', taal: 'jhaptaal'),
+        throwsA(predicate((e) => e is NagmaParseError && e.message.contains('should have 2 matras'))));
+  });
+
+  test('wrong line count for ektaal errors', () {
+    expect(() => parseNagma('S r | g m | P d', taal: 'ektaal'),
+        throwsA(predicate((e) => e is NagmaParseError && e.message.contains('6 vibhags'))));
+  });
 }

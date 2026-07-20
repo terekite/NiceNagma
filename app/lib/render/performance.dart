@@ -81,8 +81,11 @@ double timingJitter(Rng rng, bool structural) =>
     structural ? 0.0 : rng.uniform(-jitterS, jitterS);
 
 /// Taal-shaped velocity before per-avartan noise. Swell toward sam across the
-/// cycle, with structural accents/dips layered on.
-int baseVelocity(int matra, String mark, int matraCount) {
+/// cycle, with structural accents/dips layered on. `marks` is the taal's full
+/// per-matra mark list so the post-khaali dip lands on the matra after the
+/// *actual* khaali(s) — khaali is off-centre in most taals (and doubled in
+/// Ektaal), so the old `matraCount ~/ 2` midpoint was wrong.
+int baseVelocity(int matra, String mark, int matraCount, List<String> marks) {
   var vel = baseVelocityConst.toDouble();
 
   // Gentle swell that peaks approaching sam.
@@ -97,9 +100,8 @@ int baseVelocity(int matra, String mark, int matraCount) {
     vel -= 12.0;
   }
 
-  // Slight slackening in the matra right after khaali.
-  final khaaliStart = matraCount ~/ 2; // 8 in Teentaal
-  if (matra == khaaliStart + 1) {
+  // Slight slackening in the matra right after any khaali (derived from marks).
+  if (matra > 0 && marks[matra - 1] == 'khaali') {
     vel -= 4.0;
   }
 

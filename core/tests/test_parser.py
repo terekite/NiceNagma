@@ -71,3 +71,35 @@ def test_too_many_notes_in_matra_errors():
 def test_leading_sustain_errors():
     with pytest.raises(NagmaParseError, match="cannot begin with a sustain"):
         parse_nagma("- r g m | P d P m | g m P d | P m g r")
+
+
+# --- Non-teentaal taals: the parser validates against the passed taal's shape.
+
+def test_parses_jhaptaal_ten_matras():
+    # Jhaptaal vibhags 2+3+2+3.
+    doc = parse_nagma("S r | g m P | d P | m g r", taal="jhaptaal")
+    assert doc.taal == "jhaptaal"
+    assert len(doc.matras) == 10
+    assert [m.index for m in doc.matras] == list(range(10))
+
+
+def test_parses_ektaal_twelve_matras_six_vibhags():
+    doc = parse_nagma("S r\ng m\nP d\nn S'\nd P\nm g", taal="ektaal")
+    assert len(doc.matras) == 12
+
+
+def test_parses_dadra_six_matras():
+    doc = parse_nagma("S r g | m g r", taal="dadra")
+    assert len(doc.matras) == 6
+
+
+def test_wrong_vibhag_count_for_taal_errors():
+    # Teentaal-shaped text (4 vibhags) rejected against Jhaptaal (4 vibhags too,
+    # but the matra lengths differ) -> per-vibhag length check fires.
+    with pytest.raises(NagmaParseError, match="should have 2 matras"):
+        parse_nagma("S r g m | P d P m | g m P d | P m g r", taal="jhaptaal")
+
+
+def test_wrong_line_count_for_ektaal_errors():
+    with pytest.raises(NagmaParseError, match="6 vibhags"):
+        parse_nagma("S r | g m | P d", taal="ektaal")

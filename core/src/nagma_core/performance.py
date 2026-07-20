@@ -60,10 +60,13 @@ def timing_jitter(rng: random.Random, structural: bool) -> float:
     return rng.uniform(-JITTER_S, JITTER_S)
 
 
-def base_velocity(matra: int, mark: str, matra_count: int) -> int:
+def base_velocity(matra: int, mark: str, matra_count: int, marks: list[str]) -> int:
     """Taal-shaped velocity before per-avartan noise.
 
     Swell toward sam across the cycle, with structural accents/dips layered on.
+    `marks` is the taal's full per-matra mark list so the post-khaali dip lands
+    on the matra after the *actual* khaali(s) — taals have khaali off-centre and
+    some (Ektaal) have two, so the old `matra_count // 2` midpoint was wrong.
     """
     vel = float(BASE_VELOCITY)
 
@@ -80,9 +83,9 @@ def base_velocity(matra: int, mark: str, matra_count: int) -> int:
     elif mark == "khaali":
         vel -= 12.0
 
-    # Slight slackening in the matra right after khaali.
-    khaali_start = matra_count // 2  # 8 in Teentaal
-    if matra == khaali_start + 1:
+    # Slight slackening in the matra right after any khaali (derived from the
+    # marks, not assumed at the cycle midpoint).
+    if matra > 0 and marks[matra - 1] == "khaali":
         vel -= 4.0
 
     return int(round(vel))

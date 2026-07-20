@@ -74,6 +74,20 @@ void main() {
     expect(drut.matras[4].notes[0].kind, 'swar'); // taali P struck
   });
 
+  test('drut protects structural heads for non-teentaal (pancham sawari)', () {
+    final doc =
+        parseNagma('S r g\nm P m g\nr S r g\nm P d n', taal: 'pancham_sawari');
+    final drut = reduceDoc(doc, 'drut');
+    final marks = getTaal('pancham_sawari').matraMarks();
+    expect(drut.matras.length, 15);
+    for (final m in drut.matras) {
+      if (marks[m.index] != 'plain') {
+        expect(m.notes[0].kind, 'swar',
+            reason: 'matra ${m.index} (${marks[m.index]}) must stay struck');
+      }
+    }
+  });
+
   for (final laya in ['vilambit', 'madhya', 'drut']) {
     test('reduction never invents pitches ($laya)', () {
       final doc = parseNagma(vilambit);

@@ -1,4 +1,4 @@
-// The cycle wheel: 16 matras around a ring, sam at top, a sweep hand driven by
+// The cycle wheel: the taal's matras around a ring, sam at top, a sweep hand driven by
 // the audio clock. Repaints only when `position` ticks (~60 Hz) — nothing else
 // in the tree rebuilds with it. This is the machine-perfect-laya invariant made
 // visible: the hand hits sam exactly when the sound resolves.
@@ -38,6 +38,7 @@ class CycleWheel extends StatelessWidget {
               phase: phase,
               currentMatra: matra,
               marks: taal.matraMarks,
+              samIsKhaali: taal.samIsKhaali,
               scheme: scheme,
             ),
             child: Center(
@@ -84,12 +85,14 @@ class _WheelPainter extends CustomPainter {
   final double phase; // [0,1) through the avartan
   final int currentMatra;
   final List<Clap> marks;
+  final bool samIsKhaali; // Rupak: sam is drawn as an open (khaali) dot
   final ColorScheme scheme;
 
   _WheelPainter({
     required this.phase,
     required this.currentMatra,
     required this.marks,
+    required this.samIsKhaali,
     required this.scheme,
   });
 
@@ -129,8 +132,13 @@ class _WheelPainter extends CustomPainter {
       final mark = marks[i];
       final isCurrent = i == currentMatra;
 
+      // Rupak's sam is an open beat: keep the sam-sized origin dot but draw it
+      // hollow in the khaali colour so the "cycle starts on khaali" reads.
+      final samOpen = mark == Clap.sam && samIsKhaali;
       final (fill, filled, baseR) = switch (mark) {
-        Clap.sam => (scheme.primary, true, 9.0),
+        Clap.sam => samOpen
+            ? (scheme.error, false, 9.0)
+            : (scheme.primary, true, 9.0),
         Clap.taali => (scheme.secondary, true, 7.0),
         Clap.khaali => (scheme.error, false, 7.0),
         Clap.plain => (scheme.onSurfaceVariant, false, 5.0),
@@ -181,5 +189,8 @@ class _WheelPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_WheelPainter old) =>
-      old.phase != phase || old.currentMatra != currentMatra;
+      old.phase != phase ||
+      old.currentMatra != currentMatra ||
+      old.marks.length != marks.length ||
+      old.samIsKhaali != samIsKhaali;
 }

@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 
 import '../config.dart';
+import '../taal.dart';
 import '../state/player_controller.dart';
 import '../widgets/cycle_wheel.dart';
 import 'nagma_editor_screen.dart';
@@ -182,11 +183,44 @@ class _LayaReadout extends StatelessWidget {
         const SizedBox(width: 8),
         _Chip(label: 'Sa ${controller.sa}', color: scheme.tertiaryContainer),
         const SizedBox(width: 8),
-        _Chip(label: 'Teentaal', color: scheme.surfaceContainerHighest),
+        // The taal chip is tappable: tap to pick a taal. Switching taal also
+        // loads that taal's default lehra (the text grammar is per-vibhag).
+        InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => _showTaalDialog(context, controller),
+          child: _Chip(
+              label: controller.taal.label,
+              color: scheme.surfaceContainerHighest),
+        ),
       ],
     );
   }
 }
+
+/// Pick a taal. Selecting one goes through controller.setTaal, which swaps in
+/// that taal's default lehra and re-renders (the cycle wheel + counter follow).
+Future<void> _showTaalDialog(
+        BuildContext context, PlayerController controller) =>
+    showDialog<void>(
+      context: context,
+      builder: (_) => SimpleDialog(
+        title: const Text('Taal'),
+        children: [
+          for (final t in Taal.all)
+            ListTile(
+              title: Text(t.label),
+              subtitle: Text('${t.matraCount} matras'),
+              trailing: t.name == controller.taalName
+                  ? const Icon(Icons.check)
+                  : null,
+              onTap: () {
+                controller.setTaal(t.name);
+                Navigator.of(context).pop();
+              },
+            ),
+        ],
+      ),
+    );
 
 class _Chip extends StatelessWidget {
   final String label;

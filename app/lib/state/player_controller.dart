@@ -134,6 +134,19 @@ class PlayerController extends ChangeNotifier {
     _scheduleReRender();
   }
 
+  /// Switch taal. Because the text grammar is one line per vibhag, the current
+  /// nagma won't fit a different taal's structure — so we also load that taal's
+  /// default nagma. Re-renders both lehra and tanpura (first-string may change).
+  void setTaal(String name) {
+    if (name == taalName) return;
+    taalName = name;
+    nagmaText = Config.defaultNagmaFor(name);
+    nagmaError = null;
+    notifyListeners();
+    _scheduleReRender();
+    _renderAndLoadTanpura();
+  }
+
   void setSa(String v) {
     if (v == sa) return;
     sa = v;
