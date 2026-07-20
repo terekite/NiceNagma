@@ -21,6 +21,11 @@ class Vibhag:
 class Taal:
     name: str
     vibhags: tuple[Vibhag, ...]
+    # Rupak's cycle starts ON a khaali: matra 0 is the origin (sam) for timing,
+    # velocity swell, and the wheel's sweep, but it is *displayed* as an open
+    # (khaali) beat. The engine still treats matra 0 as 'sam'; only the UI reads
+    # this flag to render the sam dot as an open/khaali dot.
+    sam_is_khaali: bool = False
 
     @property
     def matra_count(self) -> int:
@@ -55,7 +60,92 @@ TEENTAAL = Taal(
     ),
 )
 
-TAALS: dict[str, Taal] = {t.name: t for t in (TEENTAAL,)}
+# --- Additional taals (all standard thekas; 0-based marks noted per taal) -----
+
+# Dadra: 6 matras, 3+3. Taali on 1, khaali on 4 (0-based: sam=0, khaali=3).
+DADRA = Taal(
+    name="dadra",
+    vibhags=(
+        Vibhag(length=3, clap="sam"),
+        Vibhag(length=3, clap="khaali"),
+    ),
+)
+
+# Rupak: 7 matras, 3+2+2. The sam is a KHAALI (open) — matra 1 is both the
+# cycle origin and an open beat; taali on 4 and 6. (0-based: sam/khaali=0,
+# taali=3, taali=5.) sam_is_khaali drives only the wheel's display.
+RUPAK = Taal(
+    name="rupak",
+    vibhags=(
+        Vibhag(length=3, clap="sam"),
+        Vibhag(length=2, clap="taali"),
+        Vibhag(length=2, clap="taali"),
+    ),
+    sam_is_khaali=True,
+)
+
+# Jhaptaal: 10 matras, 2+3+2+3. Taali on 1/3, khaali on 6, taali on 8
+# (0-based: sam=0, taali=2, khaali=5, taali=7).
+JHAPTAAL = Taal(
+    name="jhaptaal",
+    vibhags=(
+        Vibhag(length=2, clap="sam"),
+        Vibhag(length=3, clap="taali"),
+        Vibhag(length=2, clap="khaali"),
+        Vibhag(length=3, clap="taali"),
+    ),
+)
+
+# Ektaal: 12 matras, 6 vibhags of 2. Taali on 1/5/9/11, khaali on 3/7
+# (0-based: sam=0, khaali=2, taali=4, khaali=6, taali=8, taali=10).
+EKTAAL = Taal(
+    name="ektaal",
+    vibhags=(
+        Vibhag(length=2, clap="sam"),
+        Vibhag(length=2, clap="khaali"),
+        Vibhag(length=2, clap="taali"),
+        Vibhag(length=2, clap="khaali"),
+        Vibhag(length=2, clap="taali"),
+        Vibhag(length=2, clap="taali"),
+    ),
+)
+
+# Dhamar: 14 matras, 5+2+3+4. Taali on 1/6, khaali on 8, taali on 11
+# (0-based: sam=0, taali=5, khaali=7, taali=10).
+DHAMAR = Taal(
+    name="dhamar",
+    vibhags=(
+        Vibhag(length=5, clap="sam"),
+        Vibhag(length=2, clap="taali"),
+        Vibhag(length=3, clap="khaali"),
+        Vibhag(length=4, clap="taali"),
+    ),
+)
+
+# Pancham Sawari: 15 matras, 3+4+4+4. Taali on 1/4/12, khaali on 8
+# (0-based: sam=0, taali=3, khaali=7, taali=11).
+PANCHAM_SAWARI = Taal(
+    name="pancham_sawari",
+    vibhags=(
+        Vibhag(length=3, clap="sam"),
+        Vibhag(length=4, clap="taali"),
+        Vibhag(length=4, clap="khaali"),
+        Vibhag(length=4, clap="taali"),
+    ),
+)
+
+TAALS: dict[str, Taal] = {
+    t.name: t
+    for t in (
+        TEENTAAL,
+        DADRA,
+        RUPAK,
+        JHAPTAAL,
+        EKTAAL,
+        DHAMAR,
+        PANCHAM_SAWARI,
+    )
+}
 
 
 def get_taal(name: str) -> Taal:

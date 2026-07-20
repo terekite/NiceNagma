@@ -71,6 +71,19 @@ def test_drut_omits_repeated_plain_matras():
     assert drut.matras[4].notes[0].kind == "swar"   # taali P struck
 
 
+def test_drut_protects_structural_heads_non_teentaal():
+    # Reduction is data-driven off matra_marks, so it protects sam/taali/khaali
+    # for any taal — here Pancham Sawari (15 matras, 3+4+4+4).
+    doc = parse_nagma("S r g\nm P m g\nr S r g\nm P d n", taal="pancham_sawari")
+    drut = reduce_doc(doc, "drut")
+    marks = get_taal("pancham_sawari").matra_marks()
+    assert len(drut.matras) == 15
+    for m in drut.matras:
+        if marks[m.index] != "plain":
+            assert m.notes[0].kind == "swar", \
+                f"matra {m.index} ({marks[m.index]}) must stay struck"
+
+
 @pytest.mark.parametrize("laya", ["vilambit", "madhya", "drut"])
 def test_reduction_never_invents_pitches(laya):
     doc = parse_nagma(VILAMBIT)

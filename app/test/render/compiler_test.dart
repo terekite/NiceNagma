@@ -137,4 +137,49 @@ void main() {
     expect(() => compileScore(trimmed, bpm: 80, sa: 'D'),
         throwsA(predicate((e) => e.toString().contains('requires 16'))));
   });
+
+  // --- Non-teentaal taals compile with the right length and exact boundaries.
+
+  group('non-teentaal loop length and boundaries', () {
+    final cases = [
+      ['S r g | m g r', 'dadra', 6],
+      ['S g m | P m | g r', 'rupak', 7],
+      ['S r | g m P | d P | m g r', 'jhaptaal', 10],
+      ["S r\ng m\nP d\nn S'\nd P\nm g", 'ektaal', 12],
+      ['S r g m P\nd P\nm g r\nS r g m', 'dhamar', 14],
+      ['S r g\nm P m g\nr S r g\nm P d n', 'pancham_sawari', 15],
+    ];
+    for (final c in cases) {
+      final text = c[0] as String;
+      final taal = c[1] as String;
+      final matraCount = c[2] as int;
+      test(taal, () {
+        final doc = parseNagma(text, taal: taal);
+        final score = compileScore(doc, bpm: 95, sa: 'D', avartans: 3, seed: 5);
+        expect(score.matraCount, matraCount);
+        expect(score.avartanDurS, closeTo(matraCount * (60.0 / 95), 1e-9));
+        expect(score.loopLengthSamples,
+            (score.loopLengthS * score.sampleRate).round());
+        final md = score.matraDurS;
+        for (final e in score.events) {
+          if (e.structural) {
+            final expected = e.avartan * score.avartanDurS + e.matra * md;
+            expect(e.startS, closeTo(expected, 1e-9));
+          }
+        }
+      });
+    }
+  });
+
+  test('post-khaali dip follows actual khaali, not midpoint (ektaal)', () {
+    // Ektaal khaali at matras 2 and 6; the dip lands on matras 3 and 7.
+    final marks = ['sam', 'plain', 'khaali', 'plain', 'taali', 'plain',
+        'khaali', 'plain', 'taali', 'plain', 'taali', 'plain'];
+    final v3 = perf.baseVelocity(3, marks[3], 12, marks);
+    final v5 = perf.baseVelocity(5, marks[5], 12, marks);
+    expect(v3, lessThan(v5));
+    final v7 = perf.baseVelocity(7, marks[7], 12, marks);
+    final v9 = perf.baseVelocity(9, marks[9], 12, marks);
+    expect(v7, lessThan(v9));
+  });
 }

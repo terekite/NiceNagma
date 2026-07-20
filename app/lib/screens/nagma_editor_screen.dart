@@ -138,7 +138,8 @@ class _NagmaEditorScreenState extends State<NagmaEditorScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'One line per vibhag (4 lines for Teentaal). '
+              'One line per vibhag (${widget.controller.taal.vibhagLengths.length} '
+              'lines for ${widget.controller.taal.label}). '
               '`-` sustains, `,` splits a matra, `.` lowers / `\'` raises an octave.',
               style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13),
             ),
