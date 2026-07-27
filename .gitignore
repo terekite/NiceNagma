@@ -16,6 +16,11 @@ uv.lock
 *.mid
 /tmp/nagma-cache/
 
+# Demo film — generated media (raw capture, overlays, encoded mp4). The
+# reproducible pipeline lives in scripts/ + app/integration_test/; the heavy
+# outputs are not committed. Regenerate with ./scripts/make_demo.sh.
+/demo/
+
 # Large binary assets (decide per-file whether to commit; see assets/LICENSES.md)
 assets/soundfonts/*.sf2
 assets/soundfonts/*.sf3
