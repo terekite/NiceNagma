@@ -67,6 +67,14 @@ ImageDraw.Draw(ring).rounded_rectangle([PX - 1, PY - 1, PX + PW + 1, PY + PH + 1
                                        radius=R + 1, outline=70, width=2)
 bg = Image.composite(Image.new("RGB", (W, H), (255, 185, 150)), bg, ring)
 
+# subtle grain baked into the background (cheap — avoids a per-frame blend in
+# ffmpeg, which pushed the encode past 25 min). Screen-blend a low-amplitude
+# monochrome noise field over the whole background.
+rng0 = np.random.default_rng(11)
+gnoise = rng0.normal(0, 7, (H, W, 1)).astype(np.float32)
+bg = Image.fromarray(
+    np.clip(np.asarray(bg, np.float32) + gnoise, 0, 255).astype(np.uint8), "RGB")
+
 # baked top wordmark
 d0 = ImageDraw.Draw(bg)
 wm = font(AVENIR, 30, index=0)
@@ -95,7 +103,7 @@ captions = [
     ("Set your tempo", "beat"),               # 3
     ("Add the tanpura", "beat"),              # 4
     ("Switch the taal", "beat"),              # 5
-    ("Write your own", "beat"),               # 6
+    ("Compose your own nagma", "beat"),       # 6 (sargam editor — shown, not used)
     ("Your lehra, ready to loop", "tag"),     # 7 outro line
 ]
 

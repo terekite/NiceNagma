@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""Generate a looping tanpura drone MIDI in Sa=D for the demo soundtrack.
+"""Generate a looping tanpura drone MIDI for the demo soundtrack.
 
-Classic four-string cycle Pa(A2) - Sa(D3) - Sa(D3) - low Sa(D2), each string
-plucked in turn and ringing well past the next pluck so they overlap into a
-steady drone. Rendered to WAV through assets/soundfonts/tanpura.sf2 by
-scripts/make_demo.sh.  Usage: make_tanpura.py <out.mid>
+Classic four-string cycle Pa - Sa - Sa - low Sa, each string plucked in turn and
+ringing well past the next pluck so they overlap into a steady drone. Rendered to
+WAV through assets/soundfonts/tanpura.sf2 by scripts/make_demo.sh.
+
+Usage: make_tanpura.py <out.mid> [sa_midi]   (sa_midi default 50 = D3)
 """
 import sys
 import mido
 
-sa = 50  # D3
+sa = int(sys.argv[2]) if len(sys.argv) > 2 else 50  # default D3
 notes = [sa - 5, sa, sa, sa - 12]  # Pa(A2), Sa, Sa, low Sa(D2)
 tpb = 480
 mid = mido.MidiFile(ticks_per_beat=tpb)

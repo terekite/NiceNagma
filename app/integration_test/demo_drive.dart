@@ -4,16 +4,17 @@
 // cinematic sequence of real taps/drags so the screen can be captured with
 // `xcrun simctl io <udid> recordVideo`. The rendered footage is silent
 // (recordVideo captures video only); a separately rendered harmonium+tanpura
-// WAV is laid under it in post (see scripts/make_demo.sh).
+// WAV is laid under it in post, phase-locked to the on-screen sam (beat 1) by
+// detecting the cycle-wheel sweep hand — see scripts/make_demo.sh.
 //
 // Run:  flutter test integration_test/demo_drive.dart -d <sim-udid>
 //
 // Timing notes:
 //  * The cycle wheel repaints ~60 Hz while playing and the "rendering…" spinner
 //    animates during a render, so `pumpAndSettle()` would hang. Everything here
-//    holds via `_hold`, which pumps a frame every ~16 ms while letting real wall
-//    time pass (so the native AVAudioEngine playback + position EventChannel
-//    actually advance and the wheel sweeps on camera).
+//    holds via `_hold`, which pumps frames while letting real wall time pass (so
+//    native AVAudioEngine playback + the position stream advance and the wheel
+//    sweeps on camera), paced by a real Stopwatch.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,7 +24,6 @@ import 'package:nicenagma/main.dart' as app;
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-  // Render every frame to the device as fast as it can — smooth capture.
   binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
 
   testWidgets('demo choreography', (tester) async {
@@ -31,63 +31,50 @@ void main() {
     await tester.pump();
 
     // 1. Boot — let the default lehra (Teentaal, Sa D, 80 BPM) render on device.
-    //    The wheel shows a brief "rendering…" then settles, ready to play.
-    await _hold(tester, 4.5);
+    await _hold(tester, 4.0);
 
-    // 2. HERO — Play. Wheel sweep hand rotates, matra counter climbs 1→16,
-    //    "avartan 1/4" advances, harmonium loops in machine-perfect laya.
+    // 2. HERO — Play. A long, stable Teentaal hold so the sweep hand visibly
+    //    returns to sam (top) with the harmonium downbeat — the whole point of
+    //    "machine-perfect laya". No re-render here, so laya stays locked.
     await _tap(tester, find.widgetWithText(FilledButton, 'Play'));
-    await _hold(tester, 9.0);
+    await _hold(tester, 14.0);
 
-    // 3. Pick your Sa — tap the Sa chip, choose a new key from the 12-key grid.
-    //    The lehra + tanpura re-render, transposed, without a gap.
+    // 3. Pick your Sa — transpose to a new key (tempo unchanged → same sweep rate).
     await _tap(tester, find.text('Sa D'));
     await _hold(tester, 1.4);
     await _tap(tester, find.widgetWithText(ChoiceChip, 'F'));
-    await _hold(tester, 5.0);
+    await _hold(tester, 6.0);
 
-    // 4. Set your tempo — drag the Tempo slider up. Laya flips madhya → drut and
-    //    the wheel sweeps faster after the quick re-render.
+    // 4. Set your tempo — drag up to drut; the wheel sweeps faster after the
+    //    quick re-render, sam now every few seconds.
     await _drag(tester, find.byType(Slider).at(0), const Offset(260, 0));
-    await _hold(tester, 5.0);
+    await _hold(tester, 6.0);
 
-    // 5. Add the tanpura — raise the Tanpura mix slider; the drone fades in
-    //    under the lehra (instant, no re-render).
+    // 5. Add the tanpura — raise the drone under the lehra (instant, no re-render).
     await _drag(tester, find.byType(Slider).at(2), const Offset(220, 0));
     await _hold(tester, 4.5);
 
-    // 6. Any taal — tap the taal chip, switch to Jhaptaal (10 matras). The wheel
-    //    redraws with the new matra count + clap pattern and re-renders.
+    // 6. Any taal — switch to Jhaptaal (10 matras); the wheel redraws.
     await _tap(tester, find.text('Teentaal'));
     await _hold(tester, 1.4);
     await _tap(tester, find.text('Jhaptaal'));
-    await _hold(tester, 5.0);
-
-    // 7. Write your own — open the editor, type a new lehra, Apply. It renders
-    //    and plays back on return to the player.
-    await _tap(tester, find.byTooltip('Edit lehra'));
-    await _hold(tester, 1.2);
-    // A deliberately simple, always-valid Jhaptaal lehra (4 lines / vibhags).
-    await tester.enterText(
-      find.byType(TextField),
-      'S r\ng m P\nd P\nm g r',
-    );
-    await _hold(tester, 1.6);
-    await _tap(tester, find.widgetWithText(TextButton, 'Apply'));
     await _hold(tester, 6.0);
 
-    // 8. Rest on the playing wheel.
-    await _hold(tester, 2.5);
+    // 7. Compose your own — open the sargam editor and rest on it (the pre-filled
+    //    nagma, the swar legend, the example). Shown, not used: no typing/apply,
+    //    just a calm view that you can input custom nagmas. Then back to the player.
+    await _tap(tester, find.byTooltip('Edit lehra'));
+    await _hold(tester, 5.5);
+    await _tap(tester, find.byTooltip('Back to player'));
+    await _hold(tester, 3.5);
   }, timeout: const Timeout(Duration(minutes: 3)));
 }
 
-/// Hold for [seconds] of REAL wall time, pumping frames (~30 fps) so the wheel
-/// animates live while native playback + the position stream advance. Paced by a
-/// real Stopwatch so the on-screen duration matches the intended timing exactly,
-/// independent of per-frame render cost (raw pump/runAsync overhead otherwise
-/// stretched it ~3×, making the film far too long/slow).
+/// Hold for [seconds] of REAL wall time, pumping ~30 fps so the wheel animates
+/// live while native playback + the position stream advance. Paced by a real
+/// Stopwatch so on-screen duration matches the intended timing exactly.
 Future<void> _hold(WidgetTester tester, double seconds) async {
-  const int frameMs = 33; // ~30 fps
+  const int frameMs = 33;
   final int totalMs = (seconds * 1000).round();
   final sw = Stopwatch()..start();
   int nextFrameDeadline = 0;
