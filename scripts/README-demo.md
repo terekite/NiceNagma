@@ -4,6 +4,11 @@ Reproducible tooling that turns the live app into a polished 9:16 vertical
 product film (`demo/NiceNagma-demo.mp4`). The generated media under `demo/` is
 gitignored; only this pipeline is committed.
 
+Current cut: ~24s, Rupak (7 matras), the user's adapted nagma. Beats:
+**Compose your own nagma** (sargam editor, shown not typed) → **Play** →
+**Set the tempo** → **Add the tanpura**. The phone sits on a branded gradient
+with a wordmark above and big captions in a band below.
+
 ## What it does
 
 1. **Drives the real app** — `app/integration_test/demo_drive.dart` launches the

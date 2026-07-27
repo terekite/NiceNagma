@@ -56,30 +56,28 @@ def place(name, s, e, t0, r=0.45, gain=1.0):
     mix[i0:i1] += seg
 
 
-# --- harmonium: one segment per on-screen (taal, tempo, key) state -------------
-# windows overlap by the ramp so crossfades land on the re-render moments.
-# Anchors are the wheel's sam times measured on the FINAL composite (the frame
-# where the matra counter flips to 1). This already folds in the sweep-hand
-# detector's ~1-frame lead and the composite's ~1-frame PTS offset, so the
-# harmonium downbeat lands exactly on the wheel's beat 1 as the viewer sees it.
-place("harm_tt_D80",  3.80, 20.55, 15.80)                 # Teentaal D vilambit (hero)
-place("harm_tt_F80",  20.10, 25.95, 15.80)                # Teentaal F vilambit (Sa→F)
-place("harm_tt_F300", 25.50, 39.15, 31.03)                # Teentaal F drut (tempo→drut)
-place("harm_jt_F300", 38.70, TOTAL, 45.13)                # Jhaptaal F drut (taal→Jhaptaal)
+# --- harmonium: the user's Rupak lehra, one segment per on-screen tempo ---------
+# The film opens on the sargam editor (no audio yet), harmonium enters on Play.
+# Anchors are the wheel's sam times (the frame where the matra counter flips to
+# 1) measured on the FINAL composite, so the downbeat lands on beat 1 as seen.
+PLAY = 4.80                                               # Play tap → harmonium in
+place("harm_rk_D80",  PLAY - 0.1, 14.30, 12.00)          # Rupak D vilambit (hero); sam@frame360
+place("harm_rk_D300", 13.90, TOTAL, 16.40)               # Rupak D drut (tempo→drut); sam@frame492
 
 # gentle master fade in at Play, out at the end (on top of the window ramps)
-mfade = np.clip((t - 3.74) / 1.25, 0, 1) * np.clip((TOTAL - t) / 1.1, 0, 1)
+mfade = np.clip((t - PLAY) / 1.25, 0, 1) * np.clip((TOTAL - t) / 1.0, 0, 1)
 mix *= mfade[:, None]
 
-# --- tanpura F: enters at the "Add the tanpura" beat, drone (phase-agnostic) ----
-tan = load("tanpura_F")
+# --- tanpura D: a soft drone under the compose intro, swelling in at the
+#     "Add the tanpura" beat (drone → phase-agnostic) ---------------------------
+tan = load("tanpura_D")
 Lt = len(tan)
-tstart = 30.0
+tstart, tswell = 1.0, 18.8
 tidx = np.arange(int(tstart * SR), n)
-toff = (tidx - int(tstart * SR)) % Lt
-tenv = (np.clip((t[tidx] - tstart) / 1.5, 0, 1) *
-        np.clip((TOTAL - t[tidx]) / 1.1, 0, 1)).astype(np.float32)
-mix[tidx] += tan[toff] * tenv[:, None] * 0.55
+lvl = 0.14 + 0.42 * np.clip((t[tidx] - tswell) / 2.5, 0, 1)   # soft → full at swell
+tenv = (np.clip((t[tidx] - tstart) / 2.0, 0, 1) *
+        np.clip((TOTAL - t[tidx]) / 1.0, 0, 1)).astype(np.float32)
+mix[tidx] += tan[toff := (tidx - int(tstart * SR)) % Lt] * (tenv * lvl)[:, None]
 
 # --- master gain + soft limit --------------------------------------------------
 mix *= 2.2

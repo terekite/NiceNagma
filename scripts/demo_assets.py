@@ -15,9 +15,11 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 W, H = 1080, 1920
-PW, PH = 754, 1640
-PX, PY = (W - PW) // 2, (H - PH) // 2      # 163, 140
-R = 46
+# Phone sits a touch smaller and higher so there's a real band beneath it for
+# big, legible captions (the earlier tiny lower-third text was hard to read).
+PW, PH = 690, 1500
+PX, PY = (W - PW) // 2, 118                 # 195, 118  (bottom edge at 1618)
+R = 44
 ACCENT = (236, 96, 46)                      # deep-orange (app seed family)
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else "demo/build"
@@ -94,38 +96,33 @@ gr = rng.normal(128, 40, (H, W)).clip(0, 255).astype(np.uint8)
 Image.fromarray(gr, "L").convert("RGB").save(os.path.join(OUT, "grain.png"))
 
 # ---------------------------------------------------------------- captions
-# Lower-third band centered around y≈1795 (below the phone at PY+PH=1780).
-CAP_Y = 1812
+# Big, centred captions in the band below the phone (phone bottom = PY+PH = 1618).
+# Bold weight + a soft dark halo so they read clearly over the dark background.
+BAND_CY = 1770                               # vertical centre of the caption band
+CAP_FONT = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
 captions = [
-    ("Practice with a real lehra", "tag"),   # 0 intro tagline
-    ("Play a lehra", "beat"),                 # 1
-    ("Pick your Sa", "beat"),                 # 2
-    ("Set your tempo", "beat"),               # 3
-    ("Add the tanpura", "beat"),              # 4
-    ("Switch the taal", "beat"),              # 5
-    ("Compose your own nagma", "beat"),       # 6 (sargam editor — shown, not used)
-    ("Your lehra, ready to loop", "tag"),     # 7 outro line
+    "Compose your own nagma",   # 0  sargam editor (shown, not typed)
+    "Play your lehra",          # 1
+    "Set the tempo",            # 2
+    "Add the tanpura",          # 3
 ]
 
-body = font(HELV, 46, index=0)
-for i, (text, kind) in enumerate(captions):
+big = font(CAP_FONT, 60)
+for i, text in enumerate(captions):
     im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     dr = ImageDraw.Draw(im)
-    # measure with tracking
-    spacing = 1.5
-    widths = [dr.textlength(c, font=body) for c in text]
-    total = sum(widths) + spacing * (len(text) - 1)
-    # accent dot to the left of the text
-    dot_r = 7
-    gap = 26
-    block_w = dot_r * 2 + gap + total
-    x0 = (W - block_w) / 2
-    cy = CAP_Y + body.size / 2
-    dr.ellipse([x0, cy - dot_r, x0 + dot_r * 2, cy + dot_r], fill=ACCENT + (255,))
-    x = x0 + dot_r * 2 + gap
-    for c, w in zip(text, widths):
-        dr.text((x, CAP_Y), c, font=body, fill=(245, 240, 238, 255))
-        x += w + spacing
+    bbox = dr.textbbox((0, 0), text, font=big)
+    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    tx = (W - tw) / 2 - bbox[0]
+    ty = BAND_CY - th / 2 - bbox[1]
+    # soft dark halo for legibility, then the light text
+    dr.text((tx, ty), text, font=big, fill=(245, 240, 238, 255),
+            stroke_width=2, stroke_fill=(10, 8, 8, 210))
+    # short accent underline centred beneath the text
+    uw = min(tw * 0.5, 220)
+    uy = BAND_CY + th / 2 + 26
+    dr.rounded_rectangle([(W - uw) / 2, uy, (W + uw) / 2, uy + 5], radius=2,
+                         fill=ACCENT + (255,))
     im.save(os.path.join(OUT, f"cap_{i:02d}.png"))
 
 print(f"wrote bg.png, mask.png, {len(captions)} captions to {OUT}/  "
